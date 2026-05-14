@@ -1,7 +1,6 @@
-import time
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, extract, and_
+from sqlalchemy import select, func
 from models.expense import Expense
 from models.expense_category import ExpenseCategory
 from models.expense_tag import ExpenseTag
@@ -12,8 +11,8 @@ from schemas.statistics import (
 
 
 async def overview(db: AsyncSession, uid: int) -> OverviewResponse:
-    now = datetime.now(timezone.utc)
-    tz_offset = timedelta(hours=8)
+    tz = timezone(timedelta(hours=8))
+    now = datetime.now(tz)
 
     today_start = int(now.replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
     today_end = int((now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0).timestamp())

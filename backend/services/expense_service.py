@@ -1,6 +1,6 @@
 import time
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, delete
+from sqlalchemy import select, func, delete, or_
 from models.expense import Expense
 from models.expense_category import ExpenseCategory
 from models.expense_tag import ExpenseTag
@@ -10,6 +10,52 @@ from schemas.expense import (
     ExpenseCreate, ExpenseUpdate, ExpenseResponse, ExpenseListResponse,
     CategoryBrief, TagBrief,
 )
+
+SORT_FIELDS = {
+    "time": Expense.transaction_time,
+    "amount": Expense.amount,
+}
+
+
+def _apply_order(query, sort_by: str):
+    col = SORT_FIELDS.get(sort_by, Expense.transaction_time)
+    return query.order_by(col.desc(), Expense.id.desc())
+
+
+def _apply_keyword(query, keyword: str | None, uid: int):
+    """智能关键词搜索：金额、分类、标签、备注"""
+    if not keyword:
+        return query
+
+    kw = keyword.strip()
+    conditions = [Expense.note.contains(kw)]
+
+    # 金额搜索：精确匹配或前缀匹配（单位：分）
+    try:
+        amount_val = int(kw)
+        conditions.append(Expense.amount == amount_val)
+    except ValueError:
+        pass
+
+    # 分类名搜索
+    cat_sub = select(ExpenseCategory.id).where(
+        ExpenseCategory.uid == uid,
+        ExpenseCategory.name.contains(kw),
+        ExpenseCategory.deleted == 0,
+    ).subquery()
+    conditions.append(Expense.category_id.in_(cat_sub))
+
+    # 标签名搜索
+    tag_sub = select(ExpenseTagIndex.expense_id).join(
+        ExpenseTag, ExpenseTag.id == ExpenseTagIndex.tag_id
+    ).where(
+        ExpenseTag.uid == uid,
+        ExpenseTag.name.contains(kw),
+        ExpenseTag.deleted == 0,
+    ).subquery()
+    conditions.append(Expense.id.in_(tag_sub))
+
+    return query.where(or_(*conditions))
 
 
 async def list_expenses(
@@ -22,6 +68,7 @@ async def list_expenses(
     category_id: int | None = None,
     tag_id: int | None = None,
     keyword: str | None = None,
+    sort_by: str = "time",
 ) -> ExpenseListResponse:
     query = select(Expense).where(Expense.uid == uid, Expense.deleted == 0)
     count_query = select(func.count(Expense.id)).where(Expense.uid == uid, Expense.deleted == 0)
@@ -45,14 +92,15 @@ async def list_expenses(
         ).subquery()
         query = query.where(Expense.id.in_(tag_subquery))
         count_query = count_query.where(Expense.id.in_(tag_subquery))
-    if keyword:
-        query = query.where(Expense.note.contains(keyword))
-        count_query = count_query.where(Expense.note.contains(keyword))
+
+    query = _apply_keyword(query, keyword, uid)
+    count_query = _apply_keyword(count_query, keyword, uid)
 
     total_result = await db.execute(count_query)
     total = total_result.scalar()
 
-    query = query.order_by(Expense.id.desc()).limit(limit + 1)
+    query = _apply_order(query, sort_by)
+    query = query.limit(limit + 1)
     result = await db.execute(query)
     expenses = result.scalars().all()
 
@@ -225,8 +273,8 @@ async def _fill_relations(db: AsyncSession, uid: int, items: list[ExpenseRespons
             )
         )
         cat_map = {c.id: c for c in cat_result.scalars().all()}
-        for item in items:
-            cat = cat_map.get(item.category.id)
+        for item, expense in zip(items, expenses):
+            cat = cat_map.get(expense.category_id)
             if cat:
                 item.category = CategoryBrief(id=cat.id, name=cat.name, icon=cat.icon, color=cat.color)
 

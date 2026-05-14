@@ -17,6 +17,7 @@ async def list_expenses(
     category_id: int | None = Query(default=None),
     tag_id: int | None = Query(default=None),
     keyword: str | None = Query(default=None),
+    sort_by: str = Query(default="time"),
     uid: int = Depends(get_current_uid),
     db: AsyncSession = Depends(get_db),
 ):
@@ -24,6 +25,7 @@ async def list_expenses(
         db, uid, cursor=cursor, limit=limit,
         start_time=start_time, end_time=end_time,
         category_id=category_id, tag_id=tag_id, keyword=keyword,
+        sort_by=sort_by,
     )
 
 

@@ -28,6 +28,7 @@ async def register(db: AsyncSession, req: RegisterRequest) -> AuthResponse:
     now = int(time.time())
     user = User(
         username=req.username,
+        email=req.email,
         password=hash_password(req.password),
         nickname=req.nickname or req.username,
         created_at=now,
@@ -63,6 +64,23 @@ async def login(db: AsyncSession, req: LoginRequest) -> AuthResponse:
     token = create_token(user.id)
     user_resp = UserResponse.model_validate(user)
     return AuthResponse(token=token, user=user_resp)
+
+
+async def forgot_password(db: AsyncSession, username: str, email: str, new_password: str) -> dict:
+    """忘记密码：验证用户名+邮箱后设置新密码"""
+    result = await db.execute(select(User).where(User.username == username))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise BadRequestException("用户名不存在")
+
+    if user.email != email:
+        raise BadRequestException("邮箱不匹配，无法验证身份")
+
+    user.password = hash_password(new_password)
+    user.updated_at = int(time.time())
+    await db.commit()
+
+    return {"message": "密码重置成功，请使用新密码登录"}
 
 
 async def refresh_token(uid: int) -> dict:

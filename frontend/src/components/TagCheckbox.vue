@@ -1,0 +1,127 @@
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import { showSuccess, showTip } from '../lib/feedback'
+import { useTagStore } from '../stores/tag'
+
+const props = defineProps<{ modelValue: number[] }>()
+const emit = defineEmits<{ 'update:modelValue': [value: number[]] }>()
+
+const store = useTagStore()
+const showDialog = ref(false)
+const newTagName = ref('')
+const adding = ref(false)
+
+function toggleTag(id: number) {
+  const tags = [...props.modelValue]
+  const idx = tags.indexOf(id)
+  if (idx > -1) {
+    tags.splice(idx, 1)
+  } else {
+    tags.push(id)
+  }
+  emit('update:modelValue', tags)
+}
+
+function open() {
+  if (store.list.length === 0) {
+    store.fetchList()
+  }
+  newTagName.value = ''
+  showDialog.value = true
+}
+
+async function addNewTag() {
+  const name = newTagName.value.trim()
+  if (!name) {
+showTip('请输入标签名称')
+    return
+  }
+  // 检查是否已存在同名标签
+  const exists = store.list.find((t) => t.name === name)
+  if (exists) {
+    // 已存在则直接选中
+    if (!props.modelValue.includes(exists.id)) {
+      toggleTag(exists.id)
+    }
+    newTagName.value = ''
+showTip('已选中已有标签')
+    return
+  }
+  adding.value = true
+  try {
+    const tag = await store.create(name)
+    // 自动选中新创建的标签
+    toggleTag(tag.id)
+    newTagName.value = ''
+showSuccess('标签已添加')
+  } finally {
+    adding.value = false
+  }
+}
+
+const selectedNames = computed(() => {
+  if (props.modelValue.length === 0) return ''
+  return props.modelValue
+    .map((id) => store.list.find((t) => t.id === id)?.name)
+    .filter(Boolean)
+    .join('、')
+})
+</script>
+
+<template>
+  <van-field
+    :model-value="selectedNames || '选择标签（可选）'"
+    is-link
+    readonly
+    label="标签"
+    :placeholder="selectedNames || '选择标签（可选）'"
+    @click="open"
+  />
+  <van-popup v-model:show="showDialog" position="bottom" round :style="{ height: '55%' }">
+    <div style="padding: 16px; display: flex; flex-direction: column; height: 100%;">
+      <h4 style="margin: 0 0 12px;">选择标签</h4>
+
+      <!-- 快速新增 -->
+      <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+        <van-field
+          v-model="newTagName"
+          placeholder="输入新标签名"
+          :border="true"
+          style="flex: 1;"
+        />
+        <van-button
+          type="primary"
+          size="small"
+          :loading="adding"
+          @click="addNewTag"
+        >
+          新增
+        </van-button>
+      </div>
+
+      <!-- 已有标签列表 -->
+      <div style="flex: 1; overflow-y: auto;">
+        <div v-if="store.list.length === 0" style="text-align: center; padding: 24px; color: #969799;">
+          暂无标签，请先新增
+        </div>
+        <van-checkbox-group :model-value="modelValue">
+          <van-cell
+            v-for="tag in store.list"
+            :key="tag.id"
+            :title="tag.name"
+            clickable
+            @click="toggleTag(tag.id)"
+          >
+            <template #right-icon>
+              <van-checkbox :name="tag.id" />
+            </template>
+          </van-cell>
+        </van-checkbox-group>
+      </div>
+
+      <div style="padding: 16px 0;">
+        <van-button round block type="primary" @click="showDialog = false">确定</van-button>
+      </div>
+    </div>
+  </van-popup>
+</template>
