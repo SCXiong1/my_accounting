@@ -109,5 +109,23 @@ export const useExpenseStore = defineStore('expense', () => {
     total.value--
   }
 
-  return { items, nextCursor, total, loading, hasMore, fetchList, resetList, getOne, create, updateExpense, remove }
+  async function fetchDeleted() {
+    loading.value = true
+    try {
+      const res = await api.get('/v1/expenses', { params: { deleted: 1, limit: 100 } })
+      items.value = res.data.items
+      total.value = res.data.total
+      hasMore.value = false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function restore(id: number) {
+    await api.post(`/v1/expenses/${id}/restore`)
+    items.value = items.value.filter((e) => e.id !== id)
+    total.value--
+  }
+
+  return { items, nextCursor, total, loading, hasMore, fetchList, resetList, getOne, create, updateExpense, remove, fetchDeleted, restore }
 })

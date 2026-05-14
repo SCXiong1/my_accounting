@@ -91,6 +91,7 @@ async function handleLogout() {
       <van-cell title="修改昵称" is-link @click="showNicknameEdit = true" />
       <van-cell title="修改密码" is-link @click="showPasswordEdit = true" />
       <van-cell title="标签管理" is-link to="/tags" />
+      <van-cell title="回收站" is-link to="/trash" />
     </van-cell-group>
 
     <div style="padding: 32px 16px;">

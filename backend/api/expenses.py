@@ -18,6 +18,7 @@ async def list_expenses(
     tag_id: int | None = Query(default=None),
     keyword: str | None = Query(default=None),
     sort_by: str = Query(default="time"),
+    deleted: int = Query(default=0, le=1, ge=0),
     uid: int = Depends(get_current_uid),
     db: AsyncSession = Depends(get_db),
 ):
@@ -25,7 +26,7 @@ async def list_expenses(
         db, uid, cursor=cursor, limit=limit,
         start_time=start_time, end_time=end_time,
         category_id=category_id, tag_id=tag_id, keyword=keyword,
-        sort_by=sort_by,
+        sort_by=sort_by, show_deleted=bool(deleted),
     )
 
 
@@ -55,6 +56,15 @@ async def update_expense(
     db: AsyncSession = Depends(get_db),
 ):
     return await expense_service.update_expense(db, uid, expense_id, req)
+
+
+@router.post("/{expense_id}/restore")
+async def restore_expense(
+    expense_id: int,
+    uid: int = Depends(get_current_uid),
+    db: AsyncSession = Depends(get_db),
+):
+    return await expense_service.restore_expense(db, uid, expense_id)
 
 
 @router.delete("/{expense_id}")

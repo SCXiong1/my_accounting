@@ -69,9 +69,11 @@ async def list_expenses(
     tag_id: int | None = None,
     keyword: str | None = None,
     sort_by: str = "time",
+    show_deleted: bool = False,
 ) -> ExpenseListResponse:
-    query = select(Expense).where(Expense.uid == uid, Expense.deleted == 0)
-    count_query = select(func.count(Expense.id)).where(Expense.uid == uid, Expense.deleted == 0)
+    deleted_val = 1 if show_deleted else 0
+    query = select(Expense).where(Expense.uid == uid, Expense.deleted == deleted_val)
+    count_query = select(func.count(Expense.id)).where(Expense.uid == uid, Expense.deleted == deleted_val)
 
     if cursor:
         query = query.where(Expense.id < cursor)
@@ -226,6 +228,25 @@ async def update_expense(db: AsyncSession, uid: int, expense_id: int, req: Expen
     return await get_expense(db, uid, expense.id)
 
 
+async def restore_expense(db: AsyncSession, uid: int, expense_id: int) -> dict:
+    result = await db.execute(
+        select(Expense).where(
+            Expense.id == expense_id,
+            Expense.uid == uid,
+            Expense.deleted == 1,
+        )
+    )
+    expense = result.scalar_one_or_none()
+    if not expense:
+        raise NotFoundException("支出记录")
+
+    expense.deleted = 0
+    expense.deleted_at = 0
+    expense.updated_at = int(time.time())
+    await db.commit()
+    return {"deleted": False}
+
+
 async def delete_expense(db: AsyncSession, uid: int, expense_id: int) -> dict:
     result = await db.execute(
         select(Expense).where(
@@ -269,7 +290,6 @@ async def _fill_relations(db: AsyncSession, uid: int, items: list[ExpenseRespons
         cat_result = await db.execute(
             select(ExpenseCategory).where(
                 ExpenseCategory.id.in_(cat_ids),
-                ExpenseCategory.deleted == 0,
             )
         )
         cat_map = {c.id: c for c in cat_result.scalars().all()}

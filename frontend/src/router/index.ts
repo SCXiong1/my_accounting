@@ -62,6 +62,12 @@ const router = createRouter({
       component: () => import('../views/ProfilePage.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/trash',
+      name: 'trash',
+      component: () => import('../views/TrashPage.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 })
 
