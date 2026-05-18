@@ -1,0 +1,14 @@
+node_modules/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+*.db
+data/
+dist/
+.venv/
+venv/
+.claude/
+CLAUDE.md
+*.md
+!requirements.txt

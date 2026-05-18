@@ -1,0 +1,14 @@
+services:
+  app:
+    build: .
+    container_name: ezexpense
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - data:/app/data
+    environment:
+      - APP_SECURITY_JWT_SECRET=change-me-in-production
+
+volumes:
+  data:
