@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { showConfirmDialog } from 'vant'
 import { getErrorMessage } from '../lib/error'
 import { showSuccess, showError } from '../lib/feedback'
@@ -10,6 +10,7 @@ import { useTagStore } from '../stores/tag'
 import ExpenseCard from '../components/ExpenseCard.vue'
 
 const router = useRouter()
+const route = useRoute()
 const store = useExpenseStore()
 const catStore = useCategoryStore()
 const tagStore = useTagStore()
@@ -29,8 +30,16 @@ const limit = 20
 const refreshing = ref(false)
 
 onMounted(async () => {
+  const q = route.query
+  if (q.category_id) filterCategoryId.value = Number(q.category_id)
+  if (q.tag_id) filterTagId.value = Number(q.tag_id)
   await Promise.all([
-    store.fetchList({ limit, sort_by: 'time' }),
+    store.fetchList({
+      limit,
+      sort_by: 'time',
+      category_id: filterCategoryId.value,
+      tag_id: filterTagId.value,
+    }),
     catStore.fetchList(),
     tagStore.fetchList(),
   ])

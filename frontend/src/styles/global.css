@@ -108,3 +108,9 @@ html, body, #app {
 .filter-bar__item {
   flex-shrink: 0;
 }
+
+.chart-box {
+  width: 100%;
+  padding: 0 8px;
+  box-sizing: border-box;
+}
