@@ -1,14 +1,13 @@
 from pydantic import BaseModel, Field
+from schemas.base import BaseSchema
 
 
-class UserResponse(BaseModel):
+class UserResponse(BaseSchema):
     id: int
     username: str
     nickname: str
     created_at: int
     updated_at: int
-
-    model_config = {"from_attributes": True}
 
 
 class UpdateProfileRequest(BaseModel):

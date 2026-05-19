@@ -17,6 +17,22 @@ SORT_FIELDS = {
 }
 
 
+async def _validate_tags(db: AsyncSession, uid: int, tag_ids: list[int]):
+    if not tag_ids:
+        return
+    result = await db.execute(
+        select(ExpenseTag).where(
+            ExpenseTag.id.in_(tag_ids),
+            ExpenseTag.uid == uid,
+            ExpenseTag.deleted == 0,
+        )
+    )
+    valid_ids = {t.id for t in result.scalars().all()}
+    invalid = set(tag_ids) - valid_ids
+    if invalid:
+        raise NotFoundException(f"标签({','.join(map(str, invalid))})")
+
+
 def _apply_order(query, sort_by: str):
     col = SORT_FIELDS.get(sort_by, Expense.transaction_time)
     return query.order_by(col.desc(), Expense.id.desc())
@@ -42,7 +58,7 @@ def _apply_keyword(query, keyword: str | None, uid: int):
         ExpenseCategory.uid == uid,
         ExpenseCategory.name.contains(kw),
         ExpenseCategory.deleted == 0,
-    ).subquery()
+    ).scalar_subquery()
     conditions.append(Expense.category_id.in_(cat_sub))
 
     # 标签名搜索
@@ -52,7 +68,7 @@ def _apply_keyword(query, keyword: str | None, uid: int):
         ExpenseTag.uid == uid,
         ExpenseTag.name.contains(kw),
         ExpenseTag.deleted == 0,
-    ).subquery()
+    ).scalar_subquery()
     conditions.append(Expense.id.in_(tag_sub))
 
     return query.where(or_(*conditions))
@@ -91,7 +107,7 @@ async def list_expenses(
         tag_subquery = select(ExpenseTagIndex.expense_id).where(
             ExpenseTagIndex.tag_id == tag_id,
             ExpenseTagIndex.uid == uid,
-        ).subquery()
+        ).scalar_subquery()
         query = query.where(Expense.id.in_(tag_subquery))
         count_query = count_query.where(Expense.id.in_(tag_subquery))
 
@@ -149,18 +165,7 @@ async def create_expense(db: AsyncSession, uid: int, req: ExpenseCreate) -> Expe
     if not category.scalar_one_or_none():
         raise NotFoundException("分类")
 
-    if req.tag_ids:
-        tag_result = await db.execute(
-            select(ExpenseTag).where(
-                ExpenseTag.id.in_(req.tag_ids),
-                ExpenseTag.uid == uid,
-                ExpenseTag.deleted == 0,
-            )
-        )
-        valid_tag_ids = {t.id for t in tag_result.scalars().all()}
-        invalid = set(req.tag_ids) - valid_tag_ids
-        if invalid:
-            raise NotFoundException(f"标签({','.join(map(str,invalid))})")
+    await _validate_tags(db, uid, req.tag_ids)
 
     expense = Expense(
         uid=uid,
@@ -223,18 +228,7 @@ async def update_expense(db: AsyncSession, uid: int, expense_id: int, req: Expen
         expense.note = req.note
 
     if req.tag_ids is not None:
-        if req.tag_ids:
-            tag_result = await db.execute(
-                select(ExpenseTag).where(
-                    ExpenseTag.id.in_(req.tag_ids),
-                    ExpenseTag.uid == uid,
-                    ExpenseTag.deleted == 0,
-                )
-            )
-            valid_tag_ids = {t.id for t in tag_result.scalars().all()}
-            invalid = set(req.tag_ids) - valid_tag_ids
-            if invalid:
-                raise NotFoundException(f"标签({','.join(map(str,invalid))})")
+        await _validate_tags(db, uid, req.tag_ids)
 
         await db.execute(
             delete(ExpenseTagIndex).where(ExpenseTagIndex.expense_id == expense_id)

@@ -32,4 +32,14 @@ api.interceptors.response.use(
   },
 )
 
+export function buildQueryParams(obj: Record<string, unknown>): Record<string, string> {
+  const params: Record<string, string> = {}
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined && value !== null) {
+      params[key] = String(value)
+    }
+  }
+  return params
+}
+
 export default api

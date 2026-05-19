@@ -3,8 +3,8 @@ import bcrypt
 from jose import jwt, JWTError
 from config import get
 
-SECRET = get("security.jwt_secret", "change-me-in-production")
-EXPIRE_DAYS = int(get("security.jwt_expire_days", 7))
+SECRET = get("security.jwt_secret")
+EXPIRE_DAYS = int(get("security.jwt_expire_days"))
 ALGORITHM = "HS256"
 
 

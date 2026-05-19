@@ -7,8 +7,9 @@ export function formatDate(ts: number): string {
   return `${y}-${m}-${day}`
 }
 
-/** 格式化为"月/日"短格式 */
+/** 格式化为"YY/MM/DD"短格式（含年份） */
 export function formatShortDate(ts: number): string {
   const d = new Date(ts * 1000)
-  return `${d.getMonth() + 1}/${d.getDate()}`
+  const y = String(d.getFullYear()).slice(2)
+  return `${y}/${d.getMonth() + 1}/${d.getDate()}`
 }

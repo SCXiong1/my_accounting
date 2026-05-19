@@ -1,18 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import api from '../lib/api'
+import api, { buildQueryParams } from '../lib/api'
+import type { Category } from './category'
+import type { Tag } from './tag'
 
-export interface CategoryBrief {
-  id: number
-  name: string
-  icon: string
-  color: string
-}
-
-export interface TagBrief {
-  id: number
-  name: string
-}
+export type CategoryBrief = Pick<Category, 'id' | 'name' | 'icon' | 'color'>
+export type TagBrief = Pick<Tag, 'id' | 'name'>
 
 export interface ExpenseItem {
   id: number
@@ -25,13 +18,13 @@ export interface ExpenseItem {
 }
 
 export interface ExpenseListParams {
-  cursor?: number | null
+  cursor?: number
   limit?: number
-  start_time?: number | null
-  end_time?: number | null
-  category_id?: number | null
-  tag_id?: number | null
-  keyword?: string | null
+  start_time?: number
+  end_time?: number
+  category_id?: number
+  tag_id?: number
+  keyword?: string
   sort_by?: string
 }
 
@@ -46,7 +39,7 @@ export interface ExpenseFormData {
 
 export const useExpenseStore = defineStore('expense', () => {
   const items = ref<ExpenseItem[]>([])
-  const nextCursor = ref<number | null>(null)
+  const nextCursor = ref<number>()
   const total = ref(0)
   const loading = ref(false)
   const hasMore = ref(true)
@@ -54,15 +47,16 @@ export const useExpenseStore = defineStore('expense', () => {
   async function fetchList(params: ExpenseListParams = {}, append = false) {
     loading.value = true
     try {
-      const query: Record<string, string> = {}
-      if (params.limit) query.limit = String(params.limit)
-      if (params.cursor) query.cursor = String(params.cursor)
-      if (params.start_time) query.start_time = String(params.start_time)
-      if (params.end_time) query.end_time = String(params.end_time)
-      if (params.category_id) query.category_id = String(params.category_id)
-      if (params.tag_id) query.tag_id = String(params.tag_id)
-      if (params.keyword) query.keyword = params.keyword
-      if (params.sort_by) query.sort_by = params.sort_by
+      const query = buildQueryParams({
+        limit: params.limit,
+        cursor: params.cursor,
+        start_time: params.start_time,
+        end_time: params.end_time,
+        category_id: params.category_id,
+        tag_id: params.tag_id,
+        keyword: params.keyword,
+        sort_by: params.sort_by,
+      })
 
       const res = await api.get('/v1/expenses', { params: query })
       const data = res.data
@@ -83,7 +77,7 @@ export const useExpenseStore = defineStore('expense', () => {
 
   function resetList() {
     items.value = []
-    nextCursor.value = null
+    nextCursor.value = undefined
     total.value = 0
     hasMore.value = true
   }

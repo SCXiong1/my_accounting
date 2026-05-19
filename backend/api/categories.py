@@ -8,30 +8,28 @@ from services import category_service
 router = APIRouter(prefix="/api/v1/categories", tags=["分类"])
 
 
-@router.get("")
+@router.get("", response_model=list[CategoryResponse])
 async def list_categories(uid: int = Depends(get_current_uid), db: AsyncSession = Depends(get_db)):
     return await category_service.list_categories(db, uid)
 
 
-@router.post("")
+@router.post("", response_model=CategoryResponse)
 async def create_category(
     req: CategoryCreate,
     uid: int = Depends(get_current_uid),
     db: AsyncSession = Depends(get_db),
 ):
-    cat = await category_service.create_category(db, uid, req)
-    return CategoryResponse.model_validate(cat)
+    return await category_service.create_category(db, uid, req)
 
 
-@router.put("/{category_id}")
+@router.put("/{category_id}", response_model=CategoryResponse)
 async def update_category(
     category_id: int,
     req: CategoryUpdate,
     uid: int = Depends(get_current_uid),
     db: AsyncSession = Depends(get_db),
 ):
-    cat = await category_service.update_category(db, uid, category_id, req)
-    return CategoryResponse.model_validate(cat)
+    return await category_service.update_category(db, uid, category_id, req)
 
 
 @router.delete("/{category_id}")
@@ -43,11 +41,10 @@ async def delete_category(
     return await category_service.delete_category(db, uid, category_id)
 
 
-@router.put("/sort")
+@router.put("/sort", response_model=list[CategoryResponse])
 async def sort_categories(
     req: CategorySortRequest,
     uid: int = Depends(get_current_uid),
     db: AsyncSession = Depends(get_db),
 ):
-    cats = await category_service.sort_categories(db, uid, req)
-    return [CategoryResponse.model_validate(c) for c in cats]
+    return await category_service.sort_categories(db, uid, req)

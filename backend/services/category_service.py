@@ -15,17 +15,28 @@ async def list_categories(db: AsyncSession, uid: int) -> list[CategoryResponse]:
     )
     categories = result.scalars().all()
 
+    if not categories:
+        return []
+
+    cat_ids = [c.id for c in categories]
+    stats_result = await db.execute(
+        select(
+            Expense.category_id,
+            func.count(Expense.id).label("cnt"),
+            func.coalesce(func.sum(Expense.amount), 0).label("total"),
+        )
+        .where(
+            Expense.uid == uid,
+            Expense.category_id.in_(cat_ids),
+            Expense.deleted == 0,
+        )
+        .group_by(Expense.category_id)
+    )
+    stats = {row.category_id: (row.cnt, row.total) for row in stats_result.all()}
+
     resp = []
     for cat in categories:
-        count_result = await db.execute(
-            select(func.count(Expense.id), func.coalesce(func.sum(Expense.amount), 0))
-            .where(
-                Expense.uid == uid,
-                Expense.category_id == cat.id,
-                Expense.deleted == 0,
-            )
-        )
-        cnt, total = count_result.one()
+        cnt, total = stats.get(cat.id, (0, 0))
         resp.append(CategoryResponse(
             id=cat.id,
             name=cat.name,

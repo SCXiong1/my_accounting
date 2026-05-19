@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from schemas.base import BaseSchema
 
 
 class TagCreate(BaseModel):
@@ -18,10 +19,8 @@ class TagSortRequest(BaseModel):
     orders: list[TagSortItem]
 
 
-class TagResponse(BaseModel):
+class TagResponse(BaseSchema):
     id: int
     name: str
     display_order: int
     expense_count: int = 0
-
-    model_config = {"from_attributes": True}

@@ -16,30 +16,31 @@ const catStore = useCategoryStore()
 const tagStore = useTagStore()
 
 // 筛选条件
-const filterCategoryId = ref<number | null>(null)
-const filterTagId = ref<number | null>(null)
+const filterCategoryId = ref<number>()
+const filterTagId = ref<number>()
 const filterKeyword = ref('')
 const sortBy = ref('time')
 
 const showCategoryFilter = ref(false)
 const showTagFilter = ref(false)
 
-const limit = 20
+const INITIAL_LIMIT = 15
+const PAGE_LIMIT = 10
 
 // 下拉刷新
 const refreshing = ref(false)
 
 function syncQueryFilters() {
   const q = route.query
-  filterCategoryId.value = q.category_id ? Number(q.category_id) : null
-  filterTagId.value = q.tag_id ? Number(q.tag_id) : null
+  filterCategoryId.value = q.category_id ? Number(q.category_id) : undefined
+  filterTagId.value = q.tag_id ? Number(q.tag_id) : undefined
 }
 
 onMounted(async () => {
   syncQueryFilters()
   await Promise.all([
     store.fetchList({
-      limit,
+      limit: INITIAL_LIMIT,
       sort_by: 'time',
       category_id: filterCategoryId.value,
       tag_id: filterTagId.value,
@@ -55,14 +56,14 @@ watch(() => route.query, () => {
 })
 
 async function loadMore() {
-  if (!store.hasMore || store.loading) return
+  if (!store.hasMore) return
   try {
     await store.fetchList({
       cursor: store.nextCursor,
-      limit,
+      limit: PAGE_LIMIT,
       category_id: filterCategoryId.value,
       tag_id: filterTagId.value,
-      keyword: filterKeyword.value || null,
+      keyword: filterKeyword.value || undefined,
       sort_by: sortBy.value,
     }, true)
   } catch (e: unknown) {
@@ -75,10 +76,10 @@ async function onRefresh() {
   try {
     store.resetList()
     await store.fetchList({
-      limit,
+      limit: INITIAL_LIMIT,
       category_id: filterCategoryId.value,
       tag_id: filterTagId.value,
-      keyword: filterKeyword.value || null,
+      keyword: filterKeyword.value || undefined,
       sort_by: sortBy.value,
     })
   } catch (e: unknown) {
@@ -92,10 +93,10 @@ async function applyFilter() {
   store.resetList()
   try {
     await store.fetchList({
-      limit,
+      limit: INITIAL_LIMIT,
       category_id: filterCategoryId.value,
       tag_id: filterTagId.value,
-      keyword: filterKeyword.value || null,
+      keyword: filterKeyword.value || undefined,
       sort_by: sortBy.value,
     })
   } catch (e: unknown) {
@@ -104,8 +105,8 @@ async function applyFilter() {
 }
 
 function clearFilter() {
-  filterCategoryId.value = null
-  filterTagId.value = null
+  filterCategoryId.value = undefined
+  filterTagId.value = undefined
   filterKeyword.value = ''
 }
 
@@ -228,7 +229,7 @@ showError(getErrorMessage(e, '删除失败'))
       <van-picker
         :columns="[{ text: '全部分类', value: -1 }, ...catStore.list.map(c => ({ text: c.name, value: c.id }))]"
         :default-index="0"
-        @confirm="({ selectedValues }: { selectedValues: number[] }) => { filterCategoryId = selectedValues[0] === -1 ? null : selectedValues[0]; showCategoryFilter = false; applyFilter() }"
+        @confirm="({ selectedValues }: { selectedValues: number[] }) => { filterCategoryId = selectedValues[0] === -1 ? undefined : selectedValues[0]; showCategoryFilter = false; applyFilter() }"
         @cancel="showCategoryFilter = false"
       />
     </van-popup>
@@ -238,7 +239,7 @@ showError(getErrorMessage(e, '删除失败'))
       <van-picker
         :columns="[{ text: '全部标签', value: -1 }, ...tagStore.list.map(t => ({ text: t.name, value: t.id }))]"
         :default-index="0"
-        @confirm="({ selectedValues }: { selectedValues: number[] }) => { filterTagId = selectedValues[0] === -1 ? null : selectedValues[0]; showTagFilter = false; applyFilter() }"
+        @confirm="({ selectedValues }: { selectedValues: number[] }) => { filterTagId = selectedValues[0] === -1 ? undefined : selectedValues[0]; showTagFilter = false; applyFilter() }"
         @cancel="showTagFilter = false"
       />
     </van-popup>

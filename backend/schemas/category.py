@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from schemas.base import BaseSchema
 
 
 class CategoryCreate(BaseModel):
@@ -22,7 +23,7 @@ class CategorySortRequest(BaseModel):
     orders: list[CategorySortItem]
 
 
-class CategoryResponse(BaseModel):
+class CategoryResponse(BaseSchema):
     id: int
     name: str
     icon: str
@@ -30,5 +31,3 @@ class CategoryResponse(BaseModel):
     display_order: int
     expense_count: int = 0
     total_amount: int = 0
-
-    model_config = {"from_attributes": True}

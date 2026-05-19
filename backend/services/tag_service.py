@@ -4,7 +4,7 @@ from sqlalchemy import select, func
 from models.expense_tag import ExpenseTag
 from models.expense_tag_index import ExpenseTagIndex
 from models.expense import Expense
-from middleware.error_handler import NotFoundException
+from middleware.error_handler import NotFoundException, BadRequestException
 from schemas.tag import TagCreate, TagUpdate, TagSortRequest, TagResponse
 
 
@@ -16,18 +16,28 @@ async def list_tags(db: AsyncSession, uid: int) -> list[TagResponse]:
     )
     tags = result.scalars().all()
 
+    if not tags:
+        return []
+
+    tag_ids = [t.id for t in tags]
+    stats_result = await db.execute(
+        select(
+            ExpenseTagIndex.tag_id,
+            func.count(ExpenseTagIndex.id).label("cnt"),
+        )
+        .join(Expense, Expense.id == ExpenseTagIndex.expense_id)
+        .where(
+            ExpenseTagIndex.tag_id.in_(tag_ids),
+            ExpenseTagIndex.uid == uid,
+            Expense.deleted == 0,
+        )
+        .group_by(ExpenseTagIndex.tag_id)
+    )
+    stats = {row.tag_id: row.cnt for row in stats_result.all()}
+
     resp = []
     for tag in tags:
-        count_result = await db.execute(
-            select(func.count(ExpenseTagIndex.id))
-            .join(Expense, Expense.id == ExpenseTagIndex.expense_id)
-            .where(
-                ExpenseTagIndex.tag_id == tag.id,
-                ExpenseTagIndex.uid == uid,
-                Expense.deleted == 0,
-            )
-        )
-        cnt = count_result.scalar()
+        cnt = stats.get(tag.id, 0)
         resp.append(TagResponse(
             id=tag.id,
             name=tag.name,
@@ -38,6 +48,16 @@ async def list_tags(db: AsyncSession, uid: int) -> list[TagResponse]:
 
 
 async def create_tag(db: AsyncSession, uid: int, req: TagCreate) -> ExpenseTag:
+    existing = await db.execute(
+        select(ExpenseTag).where(
+            ExpenseTag.uid == uid,
+            ExpenseTag.name == req.name.strip(),
+            ExpenseTag.deleted == 0,
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise BadRequestException(f"标签「{req.name.strip()}」已存在，请勿重复创建")
+
     now = int(time.time())
 
     max_order = await db.execute(

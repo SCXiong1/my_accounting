@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from schemas.base import BaseSchema
 
 
 class RegisterRequest(BaseModel):
@@ -19,11 +20,9 @@ class ForgotPasswordRequest(BaseModel):
     new_password: str = Field(min_length=6, max_length=64)
 
 
-class AuthResponse(BaseModel):
+class AuthResponse(BaseSchema):
     token: str
     user: "UserResponse"
-
-    model_config = {"from_attributes": True}
 
 
 from schemas.user import UserResponse

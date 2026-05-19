@@ -7,6 +7,13 @@ from services import statistics_service
 router = APIRouter(prefix="/api/v1/statistics", tags=["统计"])
 
 
+def _parse_ids(s: str | None) -> list[int] | None:
+    if not s:
+        return None
+    ids = [int(x) for x in s.split(",") if x.strip()]
+    return ids if ids else None
+
+
 @router.get("/overview")
 async def overview(uid: int = Depends(get_current_uid), db: AsyncSession = Depends(get_db)):
     return await statistics_service.overview(db, uid)
@@ -20,7 +27,7 @@ async def by_category(
     uid: int = Depends(get_current_uid),
     db: AsyncSession = Depends(get_db),
 ):
-    return await statistics_service.by_category(db, uid, start_time, end_time, tag_ids)
+    return await statistics_service.by_category(db, uid, start_time, end_time, _parse_ids(tag_ids))
 
 
 @router.get("/by_tag")
@@ -31,7 +38,7 @@ async def by_tag(
     uid: int = Depends(get_current_uid),
     db: AsyncSession = Depends(get_db),
 ):
-    return await statistics_service.by_tag(db, uid, start_time, end_time, category_ids)
+    return await statistics_service.by_tag(db, uid, start_time, end_time, _parse_ids(category_ids))
 
 
 @router.get("/monthly")
@@ -46,5 +53,6 @@ async def monthly(
     db: AsyncSession = Depends(get_db),
 ):
     return await statistics_service.monthly(
-        db, uid, start_year, start_month, end_year, end_month, category_ids, tag_ids,
+        db, uid, start_year, start_month, end_year, end_month,
+        _parse_ids(category_ids), _parse_ids(tag_ids),
     )

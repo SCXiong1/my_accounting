@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
 import api from '../lib/api'
@@ -7,22 +7,22 @@ import { useStatisticsStore } from '../stores/statistics'
 import { formatAmount, centsToYuan } from '../core/format'
 import { showError } from '../lib/feedback'
 import { getErrorMessage } from '../lib/error'
+import { useECharts } from '../composables/useECharts'
+import { usePeriodFilter } from '../composables/usePeriodFilter'
 
 const router = useRouter()
 const store = useStatisticsStore()
+const { init, handleResize } = useECharts()
+const {
+  activePeriod, periods, timeRange,
+  showCustomPopup, pickStep, pickerValue,
+  selectPeriod, openCustom, onPickerConfirm, onCancelCustom,
+} = usePeriodFilter()
 
-type Period = 'month' | '3month' | '6month' | 'year' | 'custom'
-const activePeriod = ref<Period>('month')
+const TAG_PALETTE = ['#1989fa', '#07c160', '#ff976a', '#ee0a24', '#9c27b0', '#ffc300', '#00bcd4', '#795548']
+
 const selectedCategoryId = ref<number | null>(null)
 const busy = ref(false)
-
-const showCustomPopup = ref(false)
-const pickStep = ref<'start' | 'end'>('start')
-const customStartDate = ref(new Date())
-const customEndDate = ref(new Date())
-const pickerValue = ref<any[]>([new Date().getFullYear(), new Date().getMonth() + 1])
-const pendingStart = ref<Date | null>(null)
-
 const overview = ref({ today: 0, this_week: 0, this_month: 0, this_year: 0 })
 
 const pieRef = ref<HTMLDivElement>()
@@ -34,104 +34,22 @@ let barChart: echarts.ECharts | null = null
 let tagPieChart: echarts.ECharts | null = null
 let tagBarChart: echarts.ECharts | null = null
 
-const TAG_PALETTE = ['#1989fa', '#07c160', '#ff976a', '#ee0a24', '#9c27b0', '#ffc300', '#00bcd4', '#795548']
-
-// 图例筛选状态 — 图例切换时同步过滤下方列表
 const catLegendVisible = ref<Record<string, boolean>>({})
 const tagLegendVisible = ref<Record<string, boolean>>({})
 
 const filteredCategoryStats = computed(() =>
-  store.categoryStats.filter(s =>
-    catLegendVisible.value[`${s.category_icon} ${s.category_name}`] !== false
-  )
+  store.categoryStats.filter(s => catLegendVisible.value[`${s.category_icon} ${s.category_name}`] !== false)
 )
 
 const filteredTagStats = computed(() =>
-  store.tagStats.filter(s =>
-    tagLegendVisible.value[s.tag_name] !== false
-  )
+  store.tagStats.filter(s => tagLegendVisible.value[s.tag_name] !== false)
 )
-
-const periods: { key: Period; label: string }[] = [
-  { key: 'month', label: '本月' },
-  { key: '3month', label: '近3月' },
-  { key: '6month', label: '近6月' },
-  { key: 'year', label: '今年' },
-]
-
-const timeRange = computed(() => {
-  const now = new Date()
-  let start: Date
-  let end = now
-
-  switch (activePeriod.value) {
-    case 'month':
-      start = new Date(now.getFullYear(), now.getMonth(), 1)
-      break
-    case '3month':
-      start = new Date(now.getFullYear(), now.getMonth() - 2, 1)
-      break
-    case '6month':
-      start = new Date(now.getFullYear(), now.getMonth() - 5, 1)
-      break
-    case 'year':
-      start = new Date(now.getFullYear(), 0, 1)
-      break
-    case 'custom':
-      start = customStartDate.value
-      end = customEndDate.value
-      break
-  }
-
-  return {
-    start_time: Math.floor(start.getTime() / 1000),
-    end_time: Math.floor(end.getTime() / 1000),
-    start_year: start.getFullYear(),
-    start_month: start.getMonth() + 1,
-    end_year: end.getFullYear(),
-    end_month: end.getMonth() + 1,
-  }
-})
 
 const selectedCatLabel = computed(() => {
   if (!selectedCategoryId.value) return ''
   const cat = store.categoryStats.find(c => c.category_id === selectedCategoryId.value)
   return cat ? `${cat.category_icon} ${cat.category_name}` : ''
 })
-
-function selectPeriod(p: Period) {
-  if (activePeriod.value === p) return
-  activePeriod.value = p
-  selectedCategoryId.value = null
-}
-
-function openCustom() {
-  pendingStart.value = null
-  pickStep.value = 'start'
-  pickerValue.value = [customStartDate.value.getFullYear(), customStartDate.value.getMonth() + 1]
-  showCustomPopup.value = true
-}
-
-function onPickerConfirm({ selectedValues }: { selectedValues: number[] }) {
-  if (pickStep.value === 'start') {
-    pendingStart.value = new Date(selectedValues[0], selectedValues[1] - 1, 1)
-    pickStep.value = 'end'
-    pickerValue.value = [customEndDate.value.getFullYear(), customEndDate.value.getMonth() + 1]
-  } else {
-    // 结束月份最后一天 23:59:59（Day 0 = 上月最后一天）
-    const endDate = new Date(selectedValues[0], selectedValues[1], 0, 23, 59, 59)
-    const startDate = pendingStart.value!
-    customStartDate.value = startDate
-    customEndDate.value = endDate < startDate ? new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0, 23, 59, 59) : endDate
-    showCustomPopup.value = false
-    selectedCategoryId.value = null
-    activePeriod.value = 'custom'
-  }
-}
-
-function onCancelCustom() {
-  showCustomPopup.value = false
-}
 
 function clearCatFilter() {
   selectedCategoryId.value = null
@@ -145,6 +63,115 @@ async function fetchOverview() {
   const res = await api.get('/v1/statistics/overview')
   overview.value = res.data
 }
+
+// ── 通用渲染函数 ──────────────────────────────
+
+interface PieItem {
+  name: string
+  value: number
+  itemStyle: { color?: string }
+}
+
+function renderPieChart(
+  chartRef: HTMLDivElement | undefined,
+  chart: echarts.ECharts | null,
+  data: PieItem[],
+  legendVisible: ReturnType<typeof ref<Record<string, boolean>>>,
+): echarts.ECharts | null {
+  if (!chartRef) return null
+  if (!chart) {
+    chart = init(chartRef, (sel) => { legendVisible.value = { ...sel } })
+  }
+  if (data.length === 0) {
+    chart.setOption({ series: [{ type: 'pie', data: [] }] }, { notMerge: true })
+    return chart
+  }
+  chart.setOption({
+    tooltip: {
+      trigger: 'item',
+      formatter: (p: any) => `${p.name}<br/>金额: ¥${centsToYuan(p.value)}<br/>占比: ${p.percent}%`,
+    },
+    legend: { orient: 'horizontal', bottom: 0, textStyle: { fontSize: 11 } },
+    series: [{
+      type: 'pie', radius: ['40%', '65%'], center: ['50%', '42%'],
+      avoidLabelOverlap: false, selectedMode: false,
+      itemStyle: { borderRadius: 2, borderColor: '#fff', borderWidth: 1 },
+      label: { fontSize: 10 },
+      data,
+    }],
+  }, { notMerge: true })
+  return chart
+}
+
+function renderBarChart(
+  chartRef: HTMLDivElement | undefined,
+  chart: echarts.ECharts | null,
+  monthlyStats: typeof store.monthlyStats,
+  getDetails: (m: typeof store.monthlyStats[number]) => { id: number; name: string; color: string; amount: number }[],
+  palette?: string[],
+): echarts.ECharts | null {
+  if (!chartRef) return null
+  if (!chart) {
+    chart = init(chartRef)
+  }
+  if (monthlyStats.length === 0) {
+    chart.setOption({ series: [{ type: 'bar', data: [] }] }, { notMerge: true })
+    return chart
+  }
+
+  const detailMap = new Map<number, { name: string; color: string }>()
+  for (const m of monthlyStats) {
+    for (const d of getDetails(m)) {
+      if (!detailMap.has(d.id)) detailMap.set(d.id, { name: d.name, color: d.color })
+    }
+  }
+
+  const entries = [...detailMap.entries()]
+  const months = monthlyStats.map(s => `${String(s.year).slice(2)}/${s.month}`)
+  const series = entries.map(([id, info], i) => ({
+    name: info.name,
+    type: 'bar' as const,
+    stack: 'total',
+    barMaxWidth: 40,
+    itemStyle: { color: palette ? palette[i % palette.length] : info.color },
+    data: monthlyStats.map(m => {
+      const d = getDetails(m).find(x => x.id === id)
+      return d ? +(d.amount / 100).toFixed(0) : 0
+    }),
+  }))
+
+  const rows = Math.ceil(detailMap.size / 4)
+  const gridBottom = 25 + rows * 20 + 6
+
+  chart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: (params: any[]) => {
+        let html = `<b>${params[0].axisValue}</b><br/>`
+        let total = 0
+        for (const p of params) { html += `${p.marker} ${p.seriesName}: ¥${p.value}<br/>`; total += Number(p.value) }
+        html += `<b>合计: ¥${total}</b>`
+        return html
+      },
+    },
+    legend: { orient: 'horizontal', bottom: 5, textStyle: { fontSize: 10 } },
+    grid: { left: 10, right: 10, top: 20, bottom: gridBottom },
+    xAxis: {
+      type: 'category', data: months,
+      axisLabel: { rotate: months.length > 6 ? 30 : 0, fontSize: 11 },
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: { formatter: (v: number) => `¥${v}` },
+      splitLine: { lineStyle: { type: 'dashed' } },
+    },
+    series,
+  }, { notMerge: true })
+  return chart
+}
+
+// ── 数据加载 ──────────────────────────────────
 
 async function loadAll() {
   if (busy.value) return
@@ -162,10 +189,22 @@ async function loadAll() {
     catLegendVisible.value = {}
     tagLegendVisible.value = {}
     await nextTick()
-    renderPieChart()
-    renderBarChart()
-    renderTagPieChart()
-    renderTagBarChart()
+    pieChart = renderPieChart(pieRef.value, pieChart,
+      store.categoryStats.map(s => ({
+        name: `${s.category_icon} ${s.category_name}`,
+        value: s.total_amount,
+        itemStyle: { color: s.category_color || undefined },
+      })), catLegendVisible)
+    barChart = renderBarChart(barRef.value, barChart, store.monthlyStats,
+      m => m.by_category.map(c => ({ id: c.category_id, name: c.category_name, color: c.category_color, amount: c.amount })))
+    tagPieChart = renderPieChart(tagPieRef.value, tagPieChart,
+      store.tagStats.map((s, i) => ({
+        name: s.tag_name,
+        value: s.total_amount,
+        itemStyle: { color: TAG_PALETTE[i % TAG_PALETTE.length] },
+      })), tagLegendVisible)
+    tagBarChart = renderBarChart(tagBarRef.value, tagBarChart, store.monthlyStats,
+      m => m.by_tag.map(t => ({ id: t.tag_id, name: t.tag_name, color: '', amount: t.amount })), TAG_PALETTE)
   } catch (e: unknown) {
     showError(getErrorMessage(e, '加载失败'))
   } finally {
@@ -186,9 +225,16 @@ async function loadFiltered() {
     ])
     tagLegendVisible.value = {}
     await nextTick()
-    renderBarChart()
-    renderTagPieChart()
-    renderTagBarChart()
+    barChart = renderBarChart(barRef.value, barChart, store.monthlyStats,
+      m => m.by_category.map(c => ({ id: c.category_id, name: c.category_name, color: c.category_color, amount: c.amount })))
+    tagPieChart = renderPieChart(tagPieRef.value, tagPieChart,
+      store.tagStats.map((s, i) => ({
+        name: s.tag_name,
+        value: s.total_amount,
+        itemStyle: { color: TAG_PALETTE[i % TAG_PALETTE.length] },
+      })), tagLegendVisible)
+    tagBarChart = renderBarChart(tagBarRef.value, tagBarChart, store.monthlyStats,
+      m => m.by_tag.map(t => ({ id: t.tag_id, name: t.tag_name, color: '', amount: t.amount })), TAG_PALETTE)
   } catch (e: unknown) {
     showError(getErrorMessage(e, '加载失败'))
   } finally {
@@ -196,263 +242,17 @@ async function loadFiltered() {
   }
 }
 
-// === 分类饼图 ===
-function renderPieChart() {
-  if (!pieRef.value) return
-  if (!pieChart) {
-    pieChart = echarts.init(pieRef.value)
-    pieChart.on('legendselectchanged', (params: any) => {
-      catLegendVisible.value = { ...params.selected }
-    })
-  }
+// ── 响应式监听 ────────────────────────────────
 
-  if (store.categoryStats.length === 0) {
-    pieChart.setOption({ series: [{ type: 'pie', data: [] }] }, { notMerge: true })
-    return
-  }
-
-  pieChart.setOption({
-    tooltip: {
-      trigger: 'item',
-      formatter: (p: any) =>
-        `${p.name}<br/>金额: ¥${centsToYuan(p.value)}<br/>占比: ${p.percent}%`,
-    },
-    legend: {
-      orient: 'horizontal',
-      bottom: 0,
-      textStyle: { fontSize: 11 },
-    },
-    series: [{
-      type: 'pie',
-      radius: ['40%', '65%'],
-      center: ['50%', '42%'],
-      avoidLabelOverlap: false,
-      selectedMode: false,
-      itemStyle: { borderRadius: 2, borderColor: '#fff', borderWidth: 1 },
-      label: { fontSize: 10 },
-      data: store.categoryStats.map(s => ({
-        name: `${s.category_icon} ${s.category_name}`,
-        value: s.total_amount,
-        categoryId: s.category_id,
-        itemStyle: { color: s.category_color || undefined },
-      })),
-    }],
-  }, { notMerge: true })
-}
-
-// === 月度堆叠柱状图 ===
-function renderBarChart() {
-  if (!barRef.value) return
-  if (!barChart) {
-    barChart = echarts.init(barRef.value)
-  }
-
-  if (store.monthlyStats.length === 0) {
-    barChart.setOption({ series: [{ type: 'bar', data: [] }] }, { notMerge: true })
-    return
-  }
-
-  // 收集所有出现的分类（去重）
-  const catMap = new Map<number, { name: string; color: string }>()
-  for (const m of store.monthlyStats) {
-    for (const c of m.by_category) {
-      if (!catMap.has(c.category_id)) {
-        catMap.set(c.category_id, { name: c.category_name, color: c.category_color })
-      }
-    }
-  }
-
-  const months = store.monthlyStats.map(s => `${s.month}月`)
-  const series = [...catMap.entries()].map(([cid, info]) => ({
-    name: info.name,
-    type: 'bar' as const,
-    stack: 'total',
-    barMaxWidth: 40,
-    itemStyle: { color: info.color },
-    data: store.monthlyStats.map(m => {
-      const detail = m.by_category.find(c => c.category_id === cid)
-      return detail ? +(detail.amount / 100).toFixed(0) : 0
-    }),
-  }))
-
-  // 根据图例行数动态计算底部间距，避免重叠
-  const catRows = Math.ceil(catMap.size / 4)
-  const catGridBottom = 25 + catRows * 20 + 6
-
-  barChart.setOption({
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      formatter: (params: any[]) => {
-        let html = `<b>${params[0].axisValue}</b><br/>`
-        let total = 0
-        for (const p of params) {
-          html += `${p.marker} ${p.seriesName}: ¥${p.value}<br/>`
-          total += Number(p.value)
-        }
-        html += `<b>合计: ¥${total}</b>`
-        return html
-      },
-    },
-    legend: {
-      orient: 'horizontal',
-      bottom: 5,
-      textStyle: { fontSize: 10 },
-    },
-    grid: { left: 10, right: 10, top: 20, bottom: catGridBottom },
-    xAxis: {
-      type: 'category',
-      data: months,
-      axisLabel: { rotate: months.length > 6 ? 30 : 0, fontSize: 11 },
-    },
-    yAxis: {
-      type: 'value',
-      axisLabel: { formatter: (v: number) => `¥${v}` },
-      splitLine: { lineStyle: { type: 'dashed' } },
-    },
-    series,
-  }, { notMerge: true })
-}
-
-// === 标签饼图 ===
-function renderTagPieChart() {
-  if (!tagPieRef.value) return
-  if (!tagPieChart) {
-    tagPieChart = echarts.init(tagPieRef.value)
-    tagPieChart.on('legendselectchanged', (params: any) => {
-      tagLegendVisible.value = { ...params.selected }
-    })
-  }
-
-  if (store.tagStats.length === 0) {
-    tagPieChart.setOption({ series: [{ type: 'pie', data: [] }] }, { notMerge: true })
-    return
-  }
-
-  tagPieChart.setOption({
-    tooltip: {
-      trigger: 'item',
-      formatter: (p: any) =>
-        `${p.name}<br/>金额: ¥${centsToYuan(p.value)}<br/>占比: ${p.percent}%`,
-    },
-    legend: {
-      orient: 'horizontal',
-      bottom: 0,
-      textStyle: { fontSize: 11 },
-    },
-    series: [{
-      type: 'pie',
-      radius: ['40%', '65%'],
-      center: ['50%', '42%'],
-      avoidLabelOverlap: false,
-      selectedMode: false,
-      itemStyle: { borderRadius: 2, borderColor: '#fff', borderWidth: 1 },
-      label: { fontSize: 10 },
-      data: store.tagStats.map((s, i) => ({
-        name: s.tag_name,
-        value: s.total_amount,
-        tagId: s.tag_id,
-        itemStyle: { color: TAG_PALETTE[i % TAG_PALETTE.length] },
-      })),
-    }],
-  }, { notMerge: true })
-}
-
-// === 标签月度堆叠柱状图 ===
-function renderTagBarChart() {
-  if (!tagBarRef.value) return
-  if (!tagBarChart) {
-    tagBarChart = echarts.init(tagBarRef.value)
-  }
-
-  if (store.monthlyStats.length === 0) {
-    tagBarChart.setOption({ series: [{ type: 'bar', data: [] }] }, { notMerge: true })
-    return
-  }
-
-  const tagMap = new Map<number, string>()
-  for (const m of store.monthlyStats) {
-    for (const t of m.by_tag) {
-      if (!tagMap.has(t.tag_id)) {
-        tagMap.set(t.tag_id, t.tag_name)
-      }
-    }
-  }
-
-  const months = store.monthlyStats.map(s => `${s.month}月`)
-  const tagEntries = [...tagMap.entries()]
-  const series = tagEntries.map(([tid, tname], i) => ({
-    name: tname,
-    type: 'bar' as const,
-    stack: 'total',
-    barMaxWidth: 40,
-    itemStyle: { color: TAG_PALETTE[i % TAG_PALETTE.length] },
-    data: store.monthlyStats.map(m => {
-      const d = m.by_tag.find(t => t.tag_id === tid)
-      return d ? +(d.amount / 100).toFixed(0) : 0
-    }),
-  }))
-
-  const tagRows = Math.ceil(tagMap.size / 4)
-  const tagGridBottom = 25 + tagRows * 20 + 6
-
-  tagBarChart.setOption({
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      formatter: (params: any[]) => {
-        let html = `<b>${params[0].axisValue}</b><br/>`
-        let total = 0
-        for (const p of params) {
-          html += `${p.marker} ${p.seriesName}: ¥${p.value}<br/>`
-          total += Number(p.value)
-        }
-        html += `<b>合计: ¥${total}</b>`
-        return html
-      },
-    },
-    legend: {
-      orient: 'horizontal',
-      bottom: 5,
-      textStyle: { fontSize: 10 },
-    },
-    grid: { left: 10, right: 10, top: 20, bottom: tagGridBottom },
-    xAxis: {
-      type: 'category',
-      data: months,
-      axisLabel: { rotate: months.length > 6 ? 30 : 0, fontSize: 11 },
-    },
-    yAxis: {
-      type: 'value',
-      axisLabel: { formatter: (v: number) => `¥${v}` },
-      splitLine: { lineStyle: { type: 'dashed' } },
-    },
-    series,
-  }, { notMerge: true })
-}
-
-function handleResize() {
-  pieChart?.resize()
-  barChart?.resize()
-  tagPieChart?.resize()
-  tagBarChart?.resize()
-}
-
-watch(timeRange, loadAll)
+watch(timeRange, () => {
+  selectedCategoryId.value = null
+  loadAll()
+})
 watch(selectedCategoryId, loadFiltered)
 
-onMounted(() => {
-  loadAll()
-  window.addEventListener('resize', handleResize)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('resize', handleResize)
-  pieChart?.dispose()
-  barChart?.dispose()
-  tagPieChart?.dispose()
-  tagBarChart?.dispose()
-})
+// 初始加载 + resize
+loadAll()
+window.addEventListener('resize', handleResize)
 </script>
 
 <template>
@@ -478,28 +278,15 @@ onUnmounted(() => {
     </div>
 
     <van-grid :column-num="4" :border="false" style="margin: 8px 4px;">
-      <van-grid-item>
+      <van-grid-item v-for="item in [
+        { label: '今日', val: overview.today },
+        { label: '本周', val: overview.this_week },
+        { label: '本月', val: overview.this_month },
+        { label: '今年', val: overview.this_year },
+      ]" :key="item.label">
         <div class="stat-card" style="margin:0;width:100%;padding:10px 4px;">
-          <div class="stat-card__amount" style="font-size:15px;">{{ formatAmount(overview.today) }}</div>
-          <div class="stat-card__label">今日</div>
-        </div>
-      </van-grid-item>
-      <van-grid-item>
-        <div class="stat-card" style="margin:0;width:100%;padding:10px 4px;">
-          <div class="stat-card__amount" style="font-size:15px;">{{ formatAmount(overview.this_week) }}</div>
-          <div class="stat-card__label">本周</div>
-        </div>
-      </van-grid-item>
-      <van-grid-item>
-        <div class="stat-card" style="margin:0;width:100%;padding:10px 4px;">
-          <div class="stat-card__amount" style="font-size:15px;">{{ formatAmount(overview.this_month) }}</div>
-          <div class="stat-card__label">本月</div>
-        </div>
-      </van-grid-item>
-      <van-grid-item>
-        <div class="stat-card" style="margin:0;width:100%;padding:10px 4px;">
-          <div class="stat-card__amount" style="font-size:15px;">{{ formatAmount(overview.this_year) }}</div>
-          <div class="stat-card__label">今年</div>
+          <div class="stat-card__amount" style="font-size:15px;">{{ formatAmount(item.val) }}</div>
+          <div class="stat-card__label">{{ item.label }}</div>
         </div>
       </van-grid-item>
     </van-grid>

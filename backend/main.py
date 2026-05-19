@@ -20,7 +20,7 @@ app = FastAPI(title="个人记账", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=get("cors.origins", ["*"]),
+    allow_origins=get("cors.origins"),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
         "main:app",
-        host=get("server.host", "0.0.0.0"),
-        port=int(get("server.port", 8080)),
+        host=get("server.host"),
+        port=int(get("server.port")),
         reload=True,
     )

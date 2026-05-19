@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from schemas.base import BaseSchema
 
 
 class ExpenseCreate(BaseModel):
@@ -19,23 +20,19 @@ class ExpenseUpdate(BaseModel):
     note: str | None = Field(default=None, max_length=255)
 
 
-class TagBrief(BaseModel):
+class TagBrief(BaseSchema):
     id: int
     name: str
 
-    model_config = {"from_attributes": True}
 
-
-class CategoryBrief(BaseModel):
+class CategoryBrief(BaseSchema):
     id: int
     name: str
     icon: str
     color: str
 
-    model_config = {"from_attributes": True}
 
-
-class ExpenseResponse(BaseModel):
+class ExpenseResponse(BaseSchema):
     id: int
     amount: int
     category: CategoryBrief
@@ -43,8 +40,6 @@ class ExpenseResponse(BaseModel):
     transaction_time: int
     timezone_offset: int
     note: str
-
-    model_config = {"from_attributes": True}
 
 
 class ExpenseListResponse(BaseModel):

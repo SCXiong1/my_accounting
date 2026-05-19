@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from sqlalchemy.orm import DeclarativeBase
 from config import get
 
-DATABASE_PATH = get("database.path", "./data/ezexpense.db")
+DATABASE_PATH = get("database.path")
 DATABASE_URL = f"sqlite+aiosqlite:///{DATABASE_PATH}"
 
 engine = create_async_engine(DATABASE_URL, echo=False)
