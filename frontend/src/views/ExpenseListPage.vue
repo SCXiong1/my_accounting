@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { showConfirmDialog } from 'vant'
 import { getErrorMessage } from '../lib/error'
@@ -29,10 +29,14 @@ const limit = 20
 // 下拉刷新
 const refreshing = ref(false)
 
-onMounted(async () => {
+function syncQueryFilters() {
   const q = route.query
-  if (q.category_id) filterCategoryId.value = Number(q.category_id)
-  if (q.tag_id) filterTagId.value = Number(q.tag_id)
+  filterCategoryId.value = q.category_id ? Number(q.category_id) : null
+  filterTagId.value = q.tag_id ? Number(q.tag_id) : null
+}
+
+onMounted(async () => {
+  syncQueryFilters()
   await Promise.all([
     store.fetchList({
       limit,
@@ -43,6 +47,11 @@ onMounted(async () => {
     catStore.fetchList(),
     tagStore.fetchList(),
   ])
+})
+
+watch(() => route.query, () => {
+  syncQueryFilters()
+  applyFilter()
 })
 
 async function loadMore() {

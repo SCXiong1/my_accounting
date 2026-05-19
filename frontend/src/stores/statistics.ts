@@ -20,12 +20,19 @@ export interface TagStatItem {
   transaction_count: number
 }
 
+export interface MonthlyTagDetail {
+  tag_id: number
+  tag_name: string
+  amount: number
+}
+
 export interface MonthlyStatItem {
   year: number
   month: number
   total_amount: number
   transaction_count: number
   by_category: { category_id: number; category_name: string; category_icon: string; category_color: string; amount: number }[]
+  by_tag: MonthlyTagDetail[]
 }
 
 export const useStatisticsStore = defineStore('statistics', () => {

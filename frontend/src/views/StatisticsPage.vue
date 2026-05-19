@@ -28,11 +28,29 @@ const overview = ref({ today: 0, this_week: 0, this_month: 0, this_year: 0 })
 const pieRef = ref<HTMLDivElement>()
 const barRef = ref<HTMLDivElement>()
 const tagPieRef = ref<HTMLDivElement>()
+const tagBarRef = ref<HTMLDivElement>()
 let pieChart: echarts.ECharts | null = null
 let barChart: echarts.ECharts | null = null
 let tagPieChart: echarts.ECharts | null = null
+let tagBarChart: echarts.ECharts | null = null
 
 const TAG_PALETTE = ['#1989fa', '#07c160', '#ff976a', '#ee0a24', '#9c27b0', '#ffc300', '#00bcd4', '#795548']
+
+// 图例筛选状态 — 图例切换时同步过滤下方列表
+const catLegendVisible = ref<Record<string, boolean>>({})
+const tagLegendVisible = ref<Record<string, boolean>>({})
+
+const filteredCategoryStats = computed(() =>
+  store.categoryStats.filter(s =>
+    catLegendVisible.value[`${s.category_icon} ${s.category_name}`] !== false
+  )
+)
+
+const filteredTagStats = computed(() =>
+  store.tagStats.filter(s =>
+    tagLegendVisible.value[s.tag_name] !== false
+  )
+)
 
 const periods: { key: Period; label: string }[] = [
   { key: 'month', label: '本月' },
@@ -61,9 +79,7 @@ const timeRange = computed(() => {
       break
     case 'custom':
       start = customStartDate.value
-      end = new Date(customEndDate.value)
-      end.setMonth(end.getMonth() + 1, 0)  // 该月最后一天
-      end.setHours(23, 59, 59)
+      end = customEndDate.value
       break
   }
 
@@ -102,10 +118,11 @@ function onPickerConfirm({ selectedValues }: { selectedValues: number[] }) {
     pickStep.value = 'end'
     pickerValue.value = [customEndDate.value.getFullYear(), customEndDate.value.getMonth() + 1]
   } else {
-    const endDate = new Date(selectedValues[0], selectedValues[1] - 1, 1)
+    // 结束月份最后一天 23:59:59（Day 0 = 上月最后一天）
+    const endDate = new Date(selectedValues[0], selectedValues[1], 0, 23, 59, 59)
     const startDate = pendingStart.value!
     customStartDate.value = startDate
-    customEndDate.value = endDate < startDate ? new Date(startDate) : endDate
+    customEndDate.value = endDate < startDate ? new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0, 23, 59, 59) : endDate
     showCustomPopup.value = false
     selectedCategoryId.value = null
     activePeriod.value = 'custom'
@@ -114,20 +131,6 @@ function onPickerConfirm({ selectedValues }: { selectedValues: number[] }) {
 
 function onCancelCustom() {
   showCustomPopup.value = false
-}
-
-function onCatPieClick(params: any) {
-  const cid = params.data?.categoryId
-  if (cid) {
-    router.push({ path: '/expenses', query: { category_id: String(cid) } })
-  }
-}
-
-function onTagPieClick(params: any) {
-  const tid = params.data?.tagId
-  if (tid) {
-    router.push({ path: '/expenses', query: { tag_id: String(tid) } })
-  }
 }
 
 function clearCatFilter() {
@@ -156,10 +159,13 @@ async function loadAll() {
       store.fetchMonthly(r.start_year, r.start_month, r.end_year, r.end_month, catFilter),
       store.fetchByTag(r.start_time, r.end_time, catFilter),
     ])
+    catLegendVisible.value = {}
+    tagLegendVisible.value = {}
     await nextTick()
     renderPieChart()
     renderBarChart()
     renderTagPieChart()
+    renderTagBarChart()
   } catch (e: unknown) {
     showError(getErrorMessage(e, '加载失败'))
   } finally {
@@ -178,9 +184,11 @@ async function loadFiltered() {
       store.fetchMonthly(r.start_year, r.start_month, r.end_year, r.end_month, catFilter),
       store.fetchByTag(r.start_time, r.end_time, catFilter),
     ])
+    tagLegendVisible.value = {}
     await nextTick()
     renderBarChart()
     renderTagPieChart()
+    renderTagBarChart()
   } catch (e: unknown) {
     showError(getErrorMessage(e, '加载失败'))
   } finally {
@@ -193,7 +201,9 @@ function renderPieChart() {
   if (!pieRef.value) return
   if (!pieChart) {
     pieChart = echarts.init(pieRef.value)
-    pieChart.on('click', onCatPieClick)
+    pieChart.on('legendselectchanged', (params: any) => {
+      catLegendVisible.value = { ...params.selected }
+    })
   }
 
   if (store.categoryStats.length === 0) {
@@ -265,6 +275,10 @@ function renderBarChart() {
     }),
   }))
 
+  // 根据图例行数动态计算底部间距，避免重叠
+  const catRows = Math.ceil(catMap.size / 4)
+  const catGridBottom = 25 + catRows * 20 + 6
+
   barChart.setOption({
     tooltip: {
       trigger: 'axis',
@@ -282,10 +296,10 @@ function renderBarChart() {
     },
     legend: {
       orient: 'horizontal',
-      bottom: 0,
+      bottom: 5,
       textStyle: { fontSize: 10 },
     },
-    grid: { left: 10, right: 10, top: 20, bottom: 40 },
+    grid: { left: 10, right: 10, top: 20, bottom: catGridBottom },
     xAxis: {
       type: 'category',
       data: months,
@@ -305,7 +319,9 @@ function renderTagPieChart() {
   if (!tagPieRef.value) return
   if (!tagPieChart) {
     tagPieChart = echarts.init(tagPieRef.value)
-    tagPieChart.on('click', onTagPieClick)
+    tagPieChart.on('legendselectchanged', (params: any) => {
+      tagLegendVisible.value = { ...params.selected }
+    })
   }
 
   if (store.tagStats.length === 0) {
@@ -342,10 +358,84 @@ function renderTagPieChart() {
   }, { notMerge: true })
 }
 
+// === 标签月度堆叠柱状图 ===
+function renderTagBarChart() {
+  if (!tagBarRef.value) return
+  if (!tagBarChart) {
+    tagBarChart = echarts.init(tagBarRef.value)
+  }
+
+  if (store.monthlyStats.length === 0) {
+    tagBarChart.setOption({ series: [{ type: 'bar', data: [] }] }, { notMerge: true })
+    return
+  }
+
+  const tagMap = new Map<number, string>()
+  for (const m of store.monthlyStats) {
+    for (const t of m.by_tag) {
+      if (!tagMap.has(t.tag_id)) {
+        tagMap.set(t.tag_id, t.tag_name)
+      }
+    }
+  }
+
+  const months = store.monthlyStats.map(s => `${s.month}月`)
+  const tagEntries = [...tagMap.entries()]
+  const series = tagEntries.map(([tid, tname], i) => ({
+    name: tname,
+    type: 'bar' as const,
+    stack: 'total',
+    barMaxWidth: 40,
+    itemStyle: { color: TAG_PALETTE[i % TAG_PALETTE.length] },
+    data: store.monthlyStats.map(m => {
+      const d = m.by_tag.find(t => t.tag_id === tid)
+      return d ? +(d.amount / 100).toFixed(0) : 0
+    }),
+  }))
+
+  const tagRows = Math.ceil(tagMap.size / 4)
+  const tagGridBottom = 25 + tagRows * 20 + 6
+
+  tagBarChart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: (params: any[]) => {
+        let html = `<b>${params[0].axisValue}</b><br/>`
+        let total = 0
+        for (const p of params) {
+          html += `${p.marker} ${p.seriesName}: ¥${p.value}<br/>`
+          total += Number(p.value)
+        }
+        html += `<b>合计: ¥${total}</b>`
+        return html
+      },
+    },
+    legend: {
+      orient: 'horizontal',
+      bottom: 5,
+      textStyle: { fontSize: 10 },
+    },
+    grid: { left: 10, right: 10, top: 20, bottom: tagGridBottom },
+    xAxis: {
+      type: 'category',
+      data: months,
+      axisLabel: { rotate: months.length > 6 ? 30 : 0, fontSize: 11 },
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: { formatter: (v: number) => `¥${v}` },
+      splitLine: { lineStyle: { type: 'dashed' } },
+    },
+    series,
+  }, { notMerge: true })
+}
+
 function handleResize() {
   pieChart?.resize()
   barChart?.resize()
   tagPieChart?.resize()
+  tagBarChart?.resize()
 }
 
 watch(timeRange, loadAll)
@@ -361,6 +451,7 @@ onUnmounted(() => {
   pieChart?.dispose()
   barChart?.dispose()
   tagPieChart?.dispose()
+  tagBarChart?.dispose()
 })
 </script>
 
@@ -424,9 +515,9 @@ onUnmounted(() => {
     </div>
     <div v-else ref="pieRef" class="chart-box" style="height:280px;"></div>
 
-    <div v-if="store.categoryStats.length > 0" style="padding:0 16px 12px;">
+    <div v-if="filteredCategoryStats.length > 0" style="padding:0 16px 12px;">
       <div
-        v-for="s in store.categoryStats.slice(0, 8)" :key="s.category_id"
+        v-for="s in filteredCategoryStats.slice(0, 8)" :key="s.category_id"
         style="display:flex;align-items:center;padding:4px 0;font-size:13px;"
         @click="router.push({ path: '/expenses', query: { category_id: String(s.category_id) } })"
       >
@@ -457,9 +548,9 @@ onUnmounted(() => {
     </div>
     <div v-else ref="tagPieRef" class="chart-box" style="height:280px;"></div>
 
-    <div v-if="store.tagStats.length > 0" style="padding:0 16px 20px;">
+    <div v-if="filteredTagStats.length > 0" style="padding:0 16px 20px;">
       <div
-        v-for="(t, i) in store.tagStats.slice(0, 6)" :key="t.tag_id"
+        v-for="(t, i) in filteredTagStats.slice(0, 6)" :key="t.tag_id"
         style="display:flex;align-items:center;padding:4px 0;font-size:13px;"
         @click="router.push({ path: '/expenses', query: { tag_id: String(t.tag_id) } })"
       >
@@ -470,6 +561,14 @@ onUnmounted(() => {
         <span style="font-weight:500;">{{ formatAmount(t.total_amount) }}</span>
       </div>
     </div>
+
+    <!-- 标签月度趋势 -->
+    <van-cell title="标签月度趋势" title-style="font-weight:500;" />
+    <div v-if="!busy && store.monthlyStats.length === 0" class="empty-placeholder" style="padding:30px 0;">
+      <div style="font-size:13px;color:#c8c9cc;">暂无数据</div>
+    </div>
+    <div v-else ref="tagBarRef" class="chart-box" style="height:320px;"></div>
+    <div style="height:20px;"></div>
 
     <van-popup v-model:show="showCustomPopup" position="bottom" round>
       <div style="padding:16px;">

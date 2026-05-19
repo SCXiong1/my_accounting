@@ -6,7 +6,8 @@ from models.expense_category import ExpenseCategory
 from models.expense_tag import ExpenseTag
 from models.expense_tag_index import ExpenseTagIndex
 from schemas.statistics import (
-    OverviewResponse, CategoryStatItem, TagStatItem, MonthlyStatItem, MonthlyCategoryDetail,
+    OverviewResponse, CategoryStatItem, TagStatItem, MonthlyStatItem,
+    MonthlyCategoryDetail, MonthlyTagDetail,
 )
 
 
@@ -197,6 +198,39 @@ async def monthly(
         monthly_data[key]["by_cat"][row.category_id] = \
             monthly_data[key]["by_cat"].get(row.category_id, 0) + row.amount
 
+    # 按标签聚合
+    expense_ids = [r.id for r in rows]
+    expense_amount_map = {r.id: r.amount for r in rows}
+    expense_month_map: dict[int, tuple[int, int]] = {}
+    for row in rows:
+        dt = datetime.fromtimestamp(row.transaction_time, tz=tz)
+        expense_month_map[row.id] = (dt.year, dt.month)
+
+    tag_result = await db.execute(
+        select(ExpenseTagIndex.expense_id, ExpenseTagIndex.tag_id).where(
+            ExpenseTagIndex.expense_id.in_(expense_ids),
+            ExpenseTagIndex.uid == uid,
+        )
+    )
+    tag_rows = tag_result.all()
+
+    tag_map: dict[int, str] = {}
+    monthly_tag_data: dict[tuple[int, int], dict[int, int]] = {}
+    if tag_rows:
+        tag_ids_all = list(set(tr.tag_id for tr in tag_rows))
+        tag_result2 = await db.execute(
+            select(ExpenseTag).where(ExpenseTag.id.in_(tag_ids_all))
+        )
+        tag_map = {t.id: t.name for t in tag_result2.scalars().all()}
+
+        for tr in tag_rows:
+            key = expense_month_map.get(tr.expense_id)
+            if key:
+                if key not in monthly_tag_data:
+                    monthly_tag_data[key] = {}
+                monthly_tag_data[key][tr.tag_id] = \
+                    monthly_tag_data[key].get(tr.tag_id, 0) + expense_amount_map[tr.expense_id]
+
     items = []
     for key in sorted(monthly_data.keys()):
         data = monthly_data[key]
@@ -211,12 +245,21 @@ async def monthly(
                 amount=amt,
             ))
         by_cat.sort(key=lambda x: x.amount, reverse=True)
+
+        by_tag = []
+        tag_data = monthly_tag_data.get(key, {})
+        for tid, amt in tag_data.items():
+            tname = tag_map.get(tid, "未知")
+            by_tag.append(MonthlyTagDetail(tag_id=tid, tag_name=tname, amount=amt))
+        by_tag.sort(key=lambda x: x.amount, reverse=True)
+
         items.append(MonthlyStatItem(
             year=key[0],
             month=key[1],
             total_amount=data["total"],
             transaction_count=data["count"],
             by_category=by_cat,
+            by_tag=by_tag,
         ))
 
     return items
@@ -235,9 +278,9 @@ async def _sum_amount(db: AsyncSession, uid: int, start: int, end: int) -> int:
 
 
 def _apply_filters(query, start_time=None, end_time=None, tag_ids=None, category_ids=None):
-    if start_time:
+    if start_time is not None:
         query = query.where(Expense.transaction_time >= int(start_time))
-    if end_time:
+    if end_time is not None:
         query = query.where(Expense.transaction_time <= int(end_time))
     if tag_ids:
         ids = [int(t) for t in tag_ids.split(",") if t.strip()]

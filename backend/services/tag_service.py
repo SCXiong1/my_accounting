@@ -1,6 +1,6 @@
 import time
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, delete
+from sqlalchemy import select, func
 from models.expense_tag import ExpenseTag
 from models.expense_tag_index import ExpenseTagIndex
 from models.expense import Expense
@@ -97,14 +97,6 @@ async def delete_tag(db: AsyncSession, uid: int, tag_id: int) -> dict:
     tag.deleted = 1
     tag.deleted_at = now
     tag.updated_at = now
-
-    await db.execute(
-        delete(ExpenseTagIndex).where(
-            ExpenseTagIndex.tag_id == tag_id,
-            ExpenseTagIndex.uid == uid,
-        )
-    )
-
     await db.commit()
     return {"deleted": True}
 

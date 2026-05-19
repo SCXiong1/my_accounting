@@ -149,6 +149,19 @@ async def create_expense(db: AsyncSession, uid: int, req: ExpenseCreate) -> Expe
     if not category.scalar_one_or_none():
         raise NotFoundException("分类")
 
+    if req.tag_ids:
+        tag_result = await db.execute(
+            select(ExpenseTag).where(
+                ExpenseTag.id.in_(req.tag_ids),
+                ExpenseTag.uid == uid,
+                ExpenseTag.deleted == 0,
+            )
+        )
+        valid_tag_ids = {t.id for t in tag_result.scalars().all()}
+        invalid = set(req.tag_ids) - valid_tag_ids
+        if invalid:
+            raise NotFoundException(f"标签({','.join(map(str,invalid))})")
+
     expense = Expense(
         uid=uid,
         amount=req.amount,
@@ -210,6 +223,19 @@ async def update_expense(db: AsyncSession, uid: int, expense_id: int, req: Expen
         expense.note = req.note
 
     if req.tag_ids is not None:
+        if req.tag_ids:
+            tag_result = await db.execute(
+                select(ExpenseTag).where(
+                    ExpenseTag.id.in_(req.tag_ids),
+                    ExpenseTag.uid == uid,
+                    ExpenseTag.deleted == 0,
+                )
+            )
+            valid_tag_ids = {t.id for t in tag_result.scalars().all()}
+            invalid = set(req.tag_ids) - valid_tag_ids
+            if invalid:
+                raise NotFoundException(f"标签({','.join(map(str,invalid))})")
+
         await db.execute(
             delete(ExpenseTagIndex).where(ExpenseTagIndex.expense_id == expense_id)
         )
@@ -263,11 +289,6 @@ async def delete_expense(db: AsyncSession, uid: int, expense_id: int) -> dict:
     expense.deleted = 1
     expense.deleted_at = now
     expense.updated_at = now
-
-    await db.execute(
-        delete(ExpenseTagIndex).where(ExpenseTagIndex.expense_id == expense_id)
-    )
-
     await db.commit()
     return {"deleted": True}
 

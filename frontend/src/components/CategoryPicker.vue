@@ -1,14 +1,23 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useCategoryStore } from '../stores/category'
 
-defineProps<{ modelValue: number | null }>()
+const props = defineProps<{ modelValue: number | null }>()
 const emit = defineEmits<{ 'update:modelValue': [value: number] }>()
 
 const store = useCategoryStore()
 const showPicker = ref(false)
 
-const selectedName = ref('请选择分类')
+function catName(id: number): string {
+  const cat = store.list.find((c) => c.id === id)
+  return cat ? `${cat.icon} ${cat.name}` : '请选择分类'
+}
+
+const selectedName = ref(catName(props.modelValue as number))
+
+watch(() => props.modelValue, (id) => {
+  selectedName.value = catName(id as number)
+})
 
 const pickerColumns = computed(() =>
   store.list.map((cat) => ({

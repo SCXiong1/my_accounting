@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from middleware.jwt_auth import get_current_uid
-from schemas.tag import TagCreate, TagUpdate, TagSortRequest
+from schemas.tag import TagCreate, TagUpdate, TagSortRequest, TagResponse
 from services import tag_service
 
 router = APIRouter(prefix="/api/v1/tags", tags=["标签"])
@@ -20,7 +20,7 @@ async def create_tag(
     db: AsyncSession = Depends(get_db),
 ):
     tag = await tag_service.create_tag(db, uid, req)
-    return {"id": tag.id, "name": tag.name, "display_order": tag.display_order, "expense_count": 0}
+    return TagResponse.model_validate(tag)
 
 
 @router.put("/{tag_id}")
@@ -31,7 +31,7 @@ async def update_tag(
     db: AsyncSession = Depends(get_db),
 ):
     tag = await tag_service.update_tag(db, uid, tag_id, req)
-    return {"id": tag.id, "name": tag.name, "display_order": tag.display_order, "expense_count": 0}
+    return TagResponse.model_validate(tag)
 
 
 @router.delete("/{tag_id}")
@@ -50,4 +50,4 @@ async def sort_tags(
     db: AsyncSession = Depends(get_db),
 ):
     tags = await tag_service.sort_tags(db, uid, req)
-    return [{"id": t.id, "name": t.name, "display_order": t.display_order, "expense_count": 0} for t in tags]
+    return [TagResponse.model_validate(t) for t in tags]

@@ -34,9 +34,16 @@ class MonthlyCategoryDetail(BaseModel):
     amount: int = 0
 
 
+class MonthlyTagDetail(BaseModel):
+    tag_id: int
+    tag_name: str
+    amount: int = 0
+
+
 class MonthlyStatItem(BaseModel):
     year: int
     month: int
     total_amount: int = 0
     transaction_count: int = 0
     by_category: list[MonthlyCategoryDetail] = []
+    by_tag: list[MonthlyTagDetail] = []

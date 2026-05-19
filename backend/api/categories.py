@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from middleware.jwt_auth import get_current_uid
-from schemas.category import CategoryCreate, CategoryUpdate, CategorySortRequest
+from schemas.category import CategoryCreate, CategoryUpdate, CategorySortRequest, CategoryResponse
 from services import category_service
 
 router = APIRouter(prefix="/api/v1/categories", tags=["分类"])
@@ -20,10 +20,7 @@ async def create_category(
     db: AsyncSession = Depends(get_db),
 ):
     cat = await category_service.create_category(db, uid, req)
-    return {
-        "id": cat.id, "name": cat.name, "icon": cat.icon, "color": cat.color,
-        "display_order": cat.display_order, "expense_count": 0, "total_amount": 0,
-    }
+    return CategoryResponse.model_validate(cat)
 
 
 @router.put("/{category_id}")
@@ -34,10 +31,7 @@ async def update_category(
     db: AsyncSession = Depends(get_db),
 ):
     cat = await category_service.update_category(db, uid, category_id, req)
-    return {
-        "id": cat.id, "name": cat.name, "icon": cat.icon, "color": cat.color,
-        "display_order": cat.display_order, "expense_count": 0, "total_amount": 0,
-    }
+    return CategoryResponse.model_validate(cat)
 
 
 @router.delete("/{category_id}")
@@ -56,5 +50,4 @@ async def sort_categories(
     db: AsyncSession = Depends(get_db),
 ):
     cats = await category_service.sort_categories(db, uid, req)
-    return [{"id": c.id, "name": c.name, "icon": c.icon, "color": c.color,
-             "display_order": c.display_order, "expense_count": 0, "total_amount": 0} for c in cats]
+    return [CategoryResponse.model_validate(c) for c in cats]
