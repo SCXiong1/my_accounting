@@ -131,15 +131,17 @@ async def delete_category(db: AsyncSession, uid: int, category_id: int) -> dict:
 
 async def sort_categories(db: AsyncSession, uid: int, req: CategorySortRequest) -> list[ExpenseCategory]:
     now = int(time.time())
-    for item in req.orders:
-        result = await db.execute(
-            select(ExpenseCategory).where(
-                ExpenseCategory.id == item.id,
-                ExpenseCategory.uid == uid,
-                ExpenseCategory.deleted == 0,
-            )
+    cat_ids = [item.id for item in req.orders]
+    result = await db.execute(
+        select(ExpenseCategory).where(
+            ExpenseCategory.id.in_(cat_ids),
+            ExpenseCategory.uid == uid,
+            ExpenseCategory.deleted == 0,
         )
-        cat = result.scalar_one_or_none()
+    )
+    cat_map = {c.id: c for c in result.scalars().all()}
+    for item in req.orders:
+        cat = cat_map.get(item.id)
         if cat:
             cat.display_order = item.display_order
             cat.updated_at = now

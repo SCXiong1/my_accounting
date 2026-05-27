@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showSuccess, showError, showTip } from '../lib/feedback'
 import { useExpenseStore } from '../stores/expense'
@@ -29,7 +29,7 @@ const submitting = ref(false)
 const loading = ref(false)
 
 const showDatetimePicker = ref(false)
-const dateDisplay = ref(formatDate(transactionTime.value))
+const dateDisplay = computed(() => formatDate(transactionTime.value))
 
 // 校验状态
 const amountError = ref('')
@@ -51,7 +51,6 @@ onMounted(async () => {
       tagIds.value = expense.tags.map((t) => t.id)
       transactionTime.value = expense.transaction_time
       note.value = expense.note
-      dateDisplay.value = formatDate(expense.transaction_time)
     } finally {
       loading.value = false
     }
@@ -62,7 +61,6 @@ function onDatetimeConfirm({ selectedValues }: { selectedValues: string[] }) {
   const [y, m, d] = selectedValues.map(Number)
   const date = new Date(y, m - 1, d, 12, 0, 0)
   transactionTime.value = Math.floor(date.getTime() / 1000)
-  dateDisplay.value = formatDate(transactionTime.value)
   showDatetimePicker.value = false
 }
 

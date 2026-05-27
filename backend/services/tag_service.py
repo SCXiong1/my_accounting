@@ -123,20 +123,26 @@ async def delete_tag(db: AsyncSession, uid: int, tag_id: int) -> dict:
 
 async def sort_tags(db: AsyncSession, uid: int, req: TagSortRequest) -> list[ExpenseTag]:
     now = int(time.time())
-    for item in req.orders:
-        result = await db.execute(
-            select(ExpenseTag).where(
-                ExpenseTag.id == item.id,
-                ExpenseTag.uid == uid,
-                ExpenseTag.deleted == 0,
-            )
+    tag_ids = [item.id for item in req.orders]
+    result = await db.execute(
+        select(ExpenseTag).where(
+            ExpenseTag.id.in_(tag_ids),
+            ExpenseTag.uid == uid,
+            ExpenseTag.deleted == 0,
         )
-        tag = result.scalar_one_or_none()
+    )
+    tag_map = {t.id: t for t in result.scalars().all()}
+    for item in req.orders:
+        tag = tag_map.get(item.id)
         if tag:
             tag.display_order = item.display_order
             tag.updated_at = now
     await db.commit()
 
+    return await _list_models(db, uid)
+
+
+async def _list_models(db: AsyncSession, uid: int) -> list[ExpenseTag]:
     result = await db.execute(
         select(ExpenseTag)
         .where(ExpenseTag.uid == uid, ExpenseTag.deleted == 0)

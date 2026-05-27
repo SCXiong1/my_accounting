@@ -22,18 +22,19 @@ export const useCategoryStore = defineStore('category', () => {
 
   async function create(data: { name: string; icon?: string; color?: string }) {
     const res = await api.post('/v1/categories', data)
-    await fetchList()
+    list.value.push(res.data)
     return res.data
   }
 
   async function update(id: number, data: { name?: string; icon?: string; color?: string }) {
-    await api.put(`/v1/categories/${id}`, data)
-    await fetchList()
+    const res = await api.put(`/v1/categories/${id}`, data)
+    const idx = list.value.findIndex(c => c.id === id)
+    if (idx !== -1) Object.assign(list.value[idx], res.data)
   }
 
   async function remove(id: number) {
     await api.delete(`/v1/categories/${id}`)
-    await fetchList()
+    list.value = list.value.filter(c => c.id !== id)
   }
 
   async function sort(orders: { id: number; display_order: number }[]) {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
 import api from '../lib/api'
@@ -251,8 +251,13 @@ watch(timeRange, () => {
 watch(selectedCategoryId, loadFiltered)
 
 // 初始加载 + resize
-loadAll()
-window.addEventListener('resize', handleResize)
+onMounted(() => {
+  loadAll()
+  window.addEventListener('resize', handleResize)
+})
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+})
 </script>
 
 <template>

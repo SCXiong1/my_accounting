@@ -19,18 +19,19 @@ export const useTagStore = defineStore('tag', () => {
 
   async function create(name: string) {
     const res = await api.post('/v1/tags', { name })
-    await fetchList()
+    list.value.push(res.data)
     return res.data
   }
 
   async function update(id: number, name: string) {
-    await api.put(`/v1/tags/${id}`, { name })
-    await fetchList()
+    const res = await api.put(`/v1/tags/${id}`, { name })
+    const idx = list.value.findIndex(t => t.id === id)
+    if (idx !== -1) Object.assign(list.value[idx], res.data)
   }
 
   async function remove(id: number) {
     await api.delete(`/v1/tags/${id}`)
-    await fetchList()
+    list.value = list.value.filter(t => t.id !== id)
   }
 
   async function sort(orders: { id: number; display_order: number }[]) {

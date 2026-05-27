@@ -189,7 +189,6 @@ async def create_expense(db: AsyncSession, uid: int, req: ExpenseCreate) -> Expe
         ))
 
     await db.commit()
-    await db.refresh(expense)
 
     return await get_expense(db, uid, expense.id)
 
@@ -243,7 +242,6 @@ async def update_expense(db: AsyncSession, uid: int, expense_id: int, req: Expen
 
     expense.updated_at = now
     await db.commit()
-    await db.refresh(expense)
 
     return await get_expense(db, uid, expense.id)
 

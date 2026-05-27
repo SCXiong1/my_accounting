@@ -1,6 +1,6 @@
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, case
 from models.expense import Expense
 from models.expense_category import ExpenseCategory
 from models.expense_tag import ExpenseTag
@@ -26,16 +26,24 @@ async def overview(db: AsyncSession, uid: int) -> OverviewResponse:
 
     year_start = int(now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0).timestamp())
 
-    today_total = await _sum_amount(db, uid, today_start, today_end)
-    week_total = await _sum_amount(db, uid, week_start, today_end)
-    month_total = await _sum_amount(db, uid, month_start, today_end)
-    year_total = await _sum_amount(db, uid, year_start, today_end)
-
+    result = await db.execute(
+        select(
+            func.coalesce(func.sum(case((Expense.transaction_time >= today_start, Expense.amount), else_=0)), 0).label("today"),
+            func.coalesce(func.sum(case((Expense.transaction_time >= week_start, Expense.amount), else_=0)), 0).label("week"),
+            func.coalesce(func.sum(case((Expense.transaction_time >= month_start, Expense.amount), else_=0)), 0).label("month"),
+            func.coalesce(func.sum(case((Expense.transaction_time >= year_start, Expense.amount), else_=0)), 0).label("year"),
+        ).where(
+            Expense.uid == uid,
+            Expense.deleted == 0,
+            Expense.transaction_time < today_end,
+        )
+    )
+    row = result.one()
     return OverviewResponse(
-        today=today_total,
-        this_week=week_total,
-        this_month=month_total,
-        this_year=year_total,
+        today=row.today,
+        this_week=row.week,
+        this_month=row.month,
+        this_year=row.year,
     )
 
 
@@ -201,7 +209,7 @@ async def _aggregate_tags(
 
     tag_ids_all = list(set(tr.tag_id for tr in tag_rows))
     tag_result2 = await db.execute(
-        select(ExpenseTag).where(ExpenseTag.id.in_(tag_ids_all))
+        select(ExpenseTag).where(ExpenseTag.id.in_(tag_ids_all), ExpenseTag.deleted == 0)
     )
     tag_map = {t.id: t.name for t in tag_result2.scalars().all()}
 
@@ -287,18 +295,6 @@ async def monthly(
     tag_map, tag_data = await _aggregate_tags(db, uid, rows, tz)
 
     return _build_monthly_items(monthly_data, cat_map, tag_map, tag_data)
-
-
-async def _sum_amount(db: AsyncSession, uid: int, start: int, end: int) -> int:
-    result = await db.execute(
-        select(func.coalesce(func.sum(Expense.amount), 0)).where(
-            Expense.uid == uid,
-            Expense.deleted == 0,
-            Expense.transaction_time >= start,
-            Expense.transaction_time < end,
-        )
-    )
-    return result.scalar()
 
 
 def _apply_filters(query, start_time=None, end_time=None, tag_ids=None, category_ids=None):

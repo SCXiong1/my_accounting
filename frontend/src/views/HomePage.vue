@@ -6,6 +6,7 @@ import api from '../lib/api'
 import { formatAmount } from '../core/format'
 import { getErrorMessage } from '../lib/error'
 import { showError } from '../lib/feedback'
+import ExpenseCard from '../components/ExpenseCard.vue'
 
 const router = useRouter()
 const expenseStore = useExpenseStore()
@@ -100,22 +101,8 @@ function goAdd() {
       <div v-if="expenseStore.items.length > 0" style="margin-top: 8px;">
         <van-cell title="最近支出" :value="'共 ' + expenseStore.total + ' 条'" />
         <div v-for="expense in expenseStore.items" :key="expense.id"
-             style="display: flex; align-items: center; padding: 10px 16px;"
              @click="$router.push('/expenses')">
-          <span style="font-size: 24px; margin-right: 10px;">{{ expense.category.icon }}</span>
-          <div style="flex: 1;">
-            <div style="font-size: 14px;">
-              {{ expense.category.name }}
-              <template v-if="expense.tags.length > 0">
-                <span style="color: #969799;"> · </span>
-                <span style="font-size: 12px; color: #1989fa;">{{ expense.tags.map(t => t.name).join('、') }}</span>
-              </template>
-            </div>
-            <div v-if="expense.note" style="font-size: 12px; color: #969799;">{{ expense.note }}</div>
-          </div>
-          <div style="font-size: 16px; font-weight: bold; color: #323233;">
-            {{ formatAmount(expense.amount) }}
-          </div>
+          <ExpenseCard :expense="expense" />
         </div>
       </div>
     </van-pull-refresh>
