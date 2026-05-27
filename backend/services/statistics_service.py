@@ -194,28 +194,26 @@ async def _aggregate_tags(
         dt = datetime.fromtimestamp(row.transaction_time, tz=tz)
         month_map[row.id] = (dt.year, dt.month)
 
+    # 一次 JOIN 同时拿到 tag_id 和 tag_name
     tag_result = await db.execute(
-        select(ExpenseTagIndex.expense_id, ExpenseTagIndex.tag_id).where(
+        select(ExpenseTagIndex.expense_id, ExpenseTagIndex.tag_id, ExpenseTag.name).join(
+            ExpenseTag, ExpenseTag.id == ExpenseTagIndex.tag_id
+        ).where(
             ExpenseTagIndex.expense_id.in_(expense_ids),
             ExpenseTagIndex.uid == uid,
+            ExpenseTagIndex.deleted == 0,
+            ExpenseTag.deleted == 0,
         )
     )
     tag_rows = tag_result.all()
 
     tag_map: dict[int, str] = {}
     monthly_data: dict[tuple[int, int], dict[int, int]] = {}
-    if not tag_rows:
-        return tag_map, monthly_data
-
-    tag_ids_all = list(set(tr.tag_id for tr in tag_rows))
-    tag_result2 = await db.execute(
-        select(ExpenseTag).where(ExpenseTag.id.in_(tag_ids_all), ExpenseTag.deleted == 0)
-    )
-    tag_map = {t.id: t.name for t in tag_result2.scalars().all()}
 
     for tr in tag_rows:
         key = month_map.get(tr.expense_id)
         if key:
+            tag_map[tr.tag_id] = tr.name
             monthly_data.setdefault(key, {})
             monthly_data[key][tr.tag_id] = \
                 monthly_data[key].get(tr.tag_id, 0) + amount_map[tr.expense_id]
@@ -297,17 +295,29 @@ async def monthly(
     return _build_monthly_items(monthly_data, cat_map, tag_map, tag_data)
 
 
-def _apply_filters(query, start_time=None, end_time=None, tag_ids=None, category_ids=None):
+def _apply_time_filter(query, start_time: int | None = None, end_time: int | None = None):
     if start_time is not None:
         query = query.where(Expense.transaction_time >= int(start_time))
     if end_time is not None:
         query = query.where(Expense.transaction_time <= int(end_time))
+    return query
+
+
+def _apply_tag_category_filter(query, tag_ids: list[int] | None = None, category_ids: list[int] | None = None):
     if tag_ids:
         tag_subquery = select(ExpenseTagIndex.expense_id).where(
             ExpenseTagIndex.tag_id.in_(tag_ids),
             ExpenseTagIndex.uid == Expense.uid,
+            ExpenseTagIndex.deleted == 0,
         ).scalar_subquery()
         query = query.where(Expense.id.in_(tag_subquery))
     if category_ids:
         query = query.where(Expense.category_id.in_(category_ids))
+    return query
+
+
+def _apply_filters(query, start_time=None, end_time=None, tag_ids=None, category_ids=None):
+    """兼容包装——委托给拆分的子函数"""
+    query = _apply_time_filter(query, start_time, end_time)
+    query = _apply_tag_category_filter(query, tag_ids, category_ids)
     return query

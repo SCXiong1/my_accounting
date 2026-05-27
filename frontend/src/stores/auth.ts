@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
 import api from '../lib/api'
 import { setToken, removeToken, getToken } from '../lib/token'
 
@@ -15,8 +14,6 @@ export interface User {
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const token = ref<string | null>(getToken())
-  const router = useRouter()
-
   async function register(username: string, password: string, nickname: string | undefined, email: string) {
     const res = await api.post('/auth/register', { username, email, password, nickname })
     token.value = res.data.token
@@ -56,7 +53,6 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
     token.value = null
     removeToken()
-    router.push('/login')
   }
 
   return { user, token, register, login, fetchProfile, updateProfile, forgotPassword, logout }

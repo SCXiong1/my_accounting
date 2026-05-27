@@ -2,28 +2,23 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useExpenseStore } from '../stores/expense'
-import api from '../lib/api'
+import { useStatisticsStore } from '../stores/statistics'
 import { formatAmount } from '../core/format'
-import { getErrorMessage } from '../lib/error'
 import { showError } from '../lib/feedback'
+import { getErrorMessage } from '../lib/error'
 import ExpenseCard from '../components/ExpenseCard.vue'
 
 const router = useRouter()
 const expenseStore = useExpenseStore()
+const statsStore = useStatisticsStore()
 
-const overview = ref({ today: 0, this_week: 0, this_month: 0, this_year: 0 })
 const refreshing = ref(false)
-
-async function fetchOverview() {
-  const res = await api.get('/v1/statistics/overview')
-  overview.value = res.data
-}
 
 async function onRefresh() {
   refreshing.value = true
   try {
     await Promise.all([
-      fetchOverview(),
+      statsStore.fetchOverview(),
       expenseStore.fetchList({ limit: 5 }),
     ])
   } catch (e: unknown) {
@@ -36,7 +31,7 @@ showError(getErrorMessage(e, '刷新失败'))
 onMounted(async () => {
   try {
     await Promise.all([
-      fetchOverview(),
+      statsStore.fetchOverview(),
       expenseStore.fetchList({ limit: 5 }),
     ])
   } catch (e: unknown) {
@@ -59,7 +54,7 @@ function goAdd() {
         <van-grid-item>
           <template #default>
             <div class="stat-card" style="margin: 0; width: 100%;">
-              <div class="stat-card__amount">{{ formatAmount(overview.today) }}</div>
+              <div class="stat-card__amount">{{ formatAmount(statsStore.overview.today) }}</div>
               <div class="stat-card__label">今日支出</div>
             </div>
           </template>
@@ -67,7 +62,7 @@ function goAdd() {
         <van-grid-item>
           <template #default>
             <div class="stat-card" style="margin: 0; width: 100%;">
-              <div class="stat-card__amount">{{ formatAmount(overview.this_week) }}</div>
+              <div class="stat-card__amount">{{ formatAmount(statsStore.overview.this_week) }}</div>
               <div class="stat-card__label">本周支出</div>
             </div>
           </template>
@@ -75,7 +70,7 @@ function goAdd() {
         <van-grid-item>
           <template #default>
             <div class="stat-card" style="margin: 0; width: 100%;">
-              <div class="stat-card__amount">{{ formatAmount(overview.this_month) }}</div>
+              <div class="stat-card__amount">{{ formatAmount(statsStore.overview.this_month) }}</div>
               <div class="stat-card__label">本月支出</div>
             </div>
           </template>
@@ -83,7 +78,7 @@ function goAdd() {
         <van-grid-item>
           <template #default>
             <div class="stat-card" style="margin: 0; width: 100%;">
-              <div class="stat-card__amount">{{ formatAmount(overview.this_year) }}</div>
+              <div class="stat-card__amount">{{ formatAmount(statsStore.overview.this_year) }}</div>
               <div class="stat-card__label">今年支出</div>
             </div>
           </template>

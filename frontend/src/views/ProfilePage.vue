@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { showDialog } from 'vant'
-import { showSuccess, showError, showTip } from '../lib/feedback'
+import { showTip, withMutate } from '../lib/feedback'
 import { useAuthStore } from '../stores/auth'
-import { getErrorMessage } from '../lib/error'
 
 const auth = useAuthStore()
 
@@ -23,15 +22,15 @@ onMounted(async () => {
 
 async function saveNickname() {
   submitting.value = true
-  try {
-    await auth.updateProfile({ nickname: nickname.value })
-showSuccess('昵称修改成功')
-    showNicknameEdit.value = false
-  } catch (e: unknown) {
-showError(getErrorMessage(e, '修改失败'))
-  } finally {
-    submitting.value = false
-  }
+  await withMutate(
+    async () => {
+      await auth.updateProfile({ nickname: nickname.value })
+      showNicknameEdit.value = false
+    },
+    '昵称修改成功',
+    '修改失败',
+  )
+  submitting.value = false
 }
 
 async function savePassword() {
@@ -40,18 +39,18 @@ showTip('请填写旧密码和新密码')
     return
   }
   submitting.value = true
-  try {
-    await auth.updateProfile({
-      password: newPassword.value,
-      old_password: oldPassword.value,
-    })
-showSuccess('密码修改成功')
-    showPasswordEdit.value = false
-  } catch (e: unknown) {
-showError(getErrorMessage(e, '修改失败'))
-  } finally {
-    submitting.value = false
-  }
+  await withMutate(
+    async () => {
+      await auth.updateProfile({
+        password: newPassword.value,
+        old_password: oldPassword.value,
+      })
+      showPasswordEdit.value = false
+    },
+    '密码修改成功',
+    '修改失败',
+  )
+  submitting.value = false
 }
 
 async function handleLogout() {

@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import * as echarts from 'echarts'
-import api from '../lib/api'
 import { useStatisticsStore } from '../stores/statistics'
-import { formatAmount, centsToYuan } from '../core/format'
+import { formatAmount } from '../core/format'
 import { showError } from '../lib/feedback'
 import { getErrorMessage } from '../lib/error'
 import { useECharts } from '../composables/useECharts'
 import { usePeriodFilter } from '../composables/usePeriodFilter'
+import ChartPie from '../components/ChartPie.vue'
+import ChartBar from '../components/ChartBar.vue'
 
 const router = useRouter()
 const store = useStatisticsStore()
-const { init, handleResize } = useECharts()
+const { handleResize } = useECharts()
 const {
   activePeriod, periods, timeRange,
   showCustomPopup, pickStep, pickerValue,
@@ -23,16 +23,6 @@ const TAG_PALETTE = ['#1989fa', '#07c160', '#ff976a', '#ee0a24', '#9c27b0', '#ff
 
 const selectedCategoryId = ref<number | null>(null)
 const busy = ref(false)
-const overview = ref({ today: 0, this_week: 0, this_month: 0, this_year: 0 })
-
-const pieRef = ref<HTMLDivElement>()
-const barRef = ref<HTMLDivElement>()
-const tagPieRef = ref<HTMLDivElement>()
-const tagBarRef = ref<HTMLDivElement>()
-let pieChart: echarts.ECharts | null = null
-let barChart: echarts.ECharts | null = null
-let tagPieChart: echarts.ECharts | null = null
-let tagBarChart: echarts.ECharts | null = null
 
 const catLegendVisible = ref<Record<string, boolean>>({})
 const tagLegendVisible = ref<Record<string, boolean>>({})
@@ -59,182 +49,53 @@ function goExpenseList() {
   router.push('/expenses')
 }
 
-async function fetchOverview() {
-  const res = await api.get('/v1/statistics/overview')
-  overview.value = res.data
-}
+// ── 饼图数据转换 ──────────────────────────────
 
-// ── 通用渲染函数 ──────────────────────────────
-
-interface PieItem {
-  name: string
-  value: number
-  itemStyle: { color?: string }
-}
-
-function renderPieChart(
-  chartRef: HTMLDivElement | undefined,
-  chart: echarts.ECharts | null,
-  data: PieItem[],
-  legendVisible: ReturnType<typeof ref<Record<string, boolean>>>,
-): echarts.ECharts | null {
-  if (!chartRef) return null
-  if (!chart) {
-    chart = init(chartRef, (sel) => { legendVisible.value = { ...sel } })
-  }
-  if (data.length === 0) {
-    chart.setOption({ series: [{ type: 'pie', data: [] }] }, { notMerge: true })
-    return chart
-  }
-  chart.setOption({
-    tooltip: {
-      trigger: 'item',
-      formatter: (p: any) => `${p.name}<br/>金额: ¥${centsToYuan(p.value)}<br/>占比: ${p.percent}%`,
-    },
-    legend: { orient: 'horizontal', bottom: 0, textStyle: { fontSize: 11 } },
-    series: [{
-      type: 'pie', radius: ['40%', '65%'], center: ['50%', '42%'],
-      avoidLabelOverlap: false, selectedMode: false,
-      itemStyle: { borderRadius: 2, borderColor: '#fff', borderWidth: 1 },
-      label: { fontSize: 10 },
-      data,
-    }],
-  }, { notMerge: true })
-  return chart
-}
-
-function renderBarChart(
-  chartRef: HTMLDivElement | undefined,
-  chart: echarts.ECharts | null,
-  monthlyStats: typeof store.monthlyStats,
-  getDetails: (m: typeof store.monthlyStats[number]) => { id: number; name: string; color: string; amount: number }[],
-  palette?: string[],
-): echarts.ECharts | null {
-  if (!chartRef) return null
-  if (!chart) {
-    chart = init(chartRef)
-  }
-  if (monthlyStats.length === 0) {
-    chart.setOption({ series: [{ type: 'bar', data: [] }] }, { notMerge: true })
-    return chart
-  }
-
-  const detailMap = new Map<number, { name: string; color: string }>()
-  for (const m of monthlyStats) {
-    for (const d of getDetails(m)) {
-      if (!detailMap.has(d.id)) detailMap.set(d.id, { name: d.name, color: d.color })
-    }
-  }
-
-  const entries = [...detailMap.entries()]
-  const months = monthlyStats.map(s => `${String(s.year).slice(2)}/${s.month}`)
-  const series = entries.map(([id, info], i) => ({
-    name: info.name,
-    type: 'bar' as const,
-    stack: 'total',
-    barMaxWidth: 40,
-    itemStyle: { color: palette ? palette[i % palette.length] : info.color },
-    data: monthlyStats.map(m => {
-      const d = getDetails(m).find(x => x.id === id)
-      return d ? +(d.amount / 100).toFixed(0) : 0
-    }),
+const catPieData = computed(() =>
+  store.categoryStats.map(s => ({
+    name: `${s.category_icon} ${s.category_name}`,
+    value: s.total_amount,
+    itemStyle: { color: s.category_color || undefined },
   }))
+)
 
-  const rows = Math.ceil(detailMap.size / 4)
-  const gridBottom = 25 + rows * 20 + 6
+const tagPieData = computed(() =>
+  store.tagStats.map((s, i) => ({
+    name: s.tag_name,
+    value: s.total_amount,
+    itemStyle: { color: TAG_PALETTE[i % TAG_PALETTE.length] },
+  }))
+)
 
-  chart.setOption({
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      formatter: (params: any[]) => {
-        let html = `<b>${params[0].axisValue}</b><br/>`
-        let total = 0
-        for (const p of params) { html += `${p.marker} ${p.seriesName}: ¥${p.value}<br/>`; total += Number(p.value) }
-        html += `<b>合计: ¥${total}</b>`
-        return html
-      },
-    },
-    legend: { orient: 'horizontal', bottom: 5, textStyle: { fontSize: 10 } },
-    grid: { left: 10, right: 10, top: 20, bottom: gridBottom },
-    xAxis: {
-      type: 'category', data: months,
-      axisLabel: { rotate: months.length > 6 ? 30 : 0, fontSize: 11 },
-    },
-    yAxis: {
-      type: 'value',
-      axisLabel: { formatter: (v: number) => `¥${v}` },
-      splitLine: { lineStyle: { type: 'dashed' } },
-    },
-    series,
-  }, { notMerge: true })
-  return chart
-}
+// ── 柱状图数据提取 ────────────────────────────
+
+const catBarDetails = (m: typeof store.monthlyStats[number]) =>
+  m.by_category.map(c => ({ id: c.category_id, name: c.category_name, color: c.category_color, amount: c.amount }))
+
+const tagBarDetails = (m: typeof store.monthlyStats[number]) =>
+  m.by_tag.map(t => ({ id: t.tag_id, name: t.tag_name, color: '', amount: t.amount }))
 
 // ── 数据加载 ──────────────────────────────────
 
-async function loadAll() {
+async function loadData(fetchAll: boolean) {
   if (busy.value) return
   busy.value = true
   const r = timeRange.value
   const catFilter = selectedCategoryId.value ? String(selectedCategoryId.value) : undefined
 
-  try {
-    await Promise.all([
-      fetchOverview(),
-      store.fetchByCategory(r.start_time, r.end_time),
-      store.fetchMonthly(r.start_year, r.start_month, r.end_year, r.end_month, catFilter),
-      store.fetchByTag(r.start_time, r.end_time, catFilter),
-    ])
+  const tasks: Promise<any>[] = []
+  if (fetchAll) {
+    tasks.push(store.fetchOverview())
+    tasks.push(store.fetchByCategory(r.start_time, r.end_time))
     catLegendVisible.value = {}
-    tagLegendVisible.value = {}
-    await nextTick()
-    pieChart = renderPieChart(pieRef.value, pieChart,
-      store.categoryStats.map(s => ({
-        name: `${s.category_icon} ${s.category_name}`,
-        value: s.total_amount,
-        itemStyle: { color: s.category_color || undefined },
-      })), catLegendVisible)
-    barChart = renderBarChart(barRef.value, barChart, store.monthlyStats,
-      m => m.by_category.map(c => ({ id: c.category_id, name: c.category_name, color: c.category_color, amount: c.amount })))
-    tagPieChart = renderPieChart(tagPieRef.value, tagPieChart,
-      store.tagStats.map((s, i) => ({
-        name: s.tag_name,
-        value: s.total_amount,
-        itemStyle: { color: TAG_PALETTE[i % TAG_PALETTE.length] },
-      })), tagLegendVisible)
-    tagBarChart = renderBarChart(tagBarRef.value, tagBarChart, store.monthlyStats,
-      m => m.by_tag.map(t => ({ id: t.tag_id, name: t.tag_name, color: '', amount: t.amount })), TAG_PALETTE)
-  } catch (e: unknown) {
-    showError(getErrorMessage(e, '加载失败'))
-  } finally {
-    busy.value = false
   }
-}
-
-async function loadFiltered() {
-  if (busy.value) return
-  busy.value = true
-  const r = timeRange.value
-  const catFilter = selectedCategoryId.value ? String(selectedCategoryId.value) : undefined
+  tasks.push(store.fetchMonthly(r.start_year, r.start_month, r.end_year, r.end_month, catFilter))
+  tasks.push(store.fetchByTag(r.start_time, r.end_time, catFilter))
 
   try {
-    await Promise.all([
-      store.fetchMonthly(r.start_year, r.start_month, r.end_year, r.end_month, catFilter),
-      store.fetchByTag(r.start_time, r.end_time, catFilter),
-    ])
-    tagLegendVisible.value = {}
+    await Promise.all(tasks)
+    if (!fetchAll) tagLegendVisible.value = {}
     await nextTick()
-    barChart = renderBarChart(barRef.value, barChart, store.monthlyStats,
-      m => m.by_category.map(c => ({ id: c.category_id, name: c.category_name, color: c.category_color, amount: c.amount })))
-    tagPieChart = renderPieChart(tagPieRef.value, tagPieChart,
-      store.tagStats.map((s, i) => ({
-        name: s.tag_name,
-        value: s.total_amount,
-        itemStyle: { color: TAG_PALETTE[i % TAG_PALETTE.length] },
-      })), tagLegendVisible)
-    tagBarChart = renderBarChart(tagBarRef.value, tagBarChart, store.monthlyStats,
-      m => m.by_tag.map(t => ({ id: t.tag_id, name: t.tag_name, color: '', amount: t.amount })), TAG_PALETTE)
   } catch (e: unknown) {
     showError(getErrorMessage(e, '加载失败'))
   } finally {
@@ -246,13 +107,12 @@ async function loadFiltered() {
 
 watch(timeRange, () => {
   selectedCategoryId.value = null
-  loadAll()
+  loadData(true)
 })
-watch(selectedCategoryId, loadFiltered)
+watch(selectedCategoryId, () => loadData(false))
 
-// 初始加载 + resize
 onMounted(() => {
-  loadAll()
+  loadData(true)
   window.addEventListener('resize', handleResize)
 })
 onUnmounted(() => {
@@ -284,10 +144,10 @@ onUnmounted(() => {
 
     <van-grid :column-num="4" :border="false" style="margin: 8px 4px;">
       <van-grid-item v-for="item in [
-        { label: '今日', val: overview.today },
-        { label: '本周', val: overview.this_week },
-        { label: '本月', val: overview.this_month },
-        { label: '今年', val: overview.this_year },
+        { label: '今日', val: store.overview.today },
+        { label: '本周', val: store.overview.this_week },
+        { label: '本月', val: store.overview.this_month },
+        { label: '今年', val: store.overview.this_year },
       ]" :key="item.label">
         <div class="stat-card" style="margin:0;width:100%;padding:10px 4px;">
           <div class="stat-card__amount" style="font-size:15px;">{{ formatAmount(item.val) }}</div>
@@ -305,7 +165,7 @@ onUnmounted(() => {
     <div v-if="!busy && store.categoryStats.length === 0" class="empty-placeholder" style="padding:30px 0;">
       <div style="font-size:13px;color:#c8c9cc;">暂无数据</div>
     </div>
-    <div v-else ref="pieRef" class="chart-box" style="height:280px;"></div>
+    <ChartPie v-else :data="catPieData" @legend-change="s => catLegendVisible = s" />
 
     <div v-if="filteredCategoryStats.length > 0" style="padding:0 16px 12px;">
       <div
@@ -331,14 +191,14 @@ onUnmounted(() => {
     <div v-if="!busy && store.monthlyStats.length === 0" class="empty-placeholder" style="padding:30px 0;">
       <div style="font-size:13px;color:#c8c9cc;">暂无数据</div>
     </div>
-    <div v-else ref="barRef" class="chart-box" style="height:320px;"></div>
+    <ChartBar v-else :monthly-stats="store.monthlyStats" :get-details="catBarDetails" />
 
     <!-- 标签占比 -->
     <van-cell title="标签占比" title-style="font-weight:500;" />
     <div v-if="!busy && store.tagStats.length === 0" class="empty-placeholder" style="padding:30px 0;">
       <div style="font-size:13px;color:#c8c9cc;">暂无标签数据</div>
     </div>
-    <div v-else ref="tagPieRef" class="chart-box" style="height:280px;"></div>
+    <ChartPie v-else :data="tagPieData" @legend-change="s => tagLegendVisible = s" />
 
     <div v-if="filteredTagStats.length > 0" style="padding:0 16px 20px;">
       <div
@@ -359,7 +219,7 @@ onUnmounted(() => {
     <div v-if="!busy && store.monthlyStats.length === 0" class="empty-placeholder" style="padding:30px 0;">
       <div style="font-size:13px;color:#c8c9cc;">暂无数据</div>
     </div>
-    <div v-else ref="tagBarRef" class="chart-box" style="height:320px;"></div>
+    <ChartBar v-else :monthly-stats="store.monthlyStats" :get-details="tagBarDetails" :palette="TAG_PALETTE" />
     <div style="height:20px;"></div>
 
     <van-popup v-model:show="showCustomPopup" position="bottom" round>

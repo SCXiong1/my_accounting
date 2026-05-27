@@ -10,7 +10,10 @@ declare module 'vue' {
   export interface GlobalComponents {
     AmountField: typeof import('./components/AmountField.vue')['default']
     CategoryPicker: typeof import('./components/CategoryPicker.vue')['default']
+    ChartBar: typeof import('./components/ChartBar.vue')['default']
+    ChartPie: typeof import('./components/ChartPie.vue')['default']
     ExpenseCard: typeof import('./components/ExpenseCard.vue')['default']
+    FilterPicker: typeof import('./components/FilterPicker.vue')['default']
     NotifyBar: typeof import('./components/NotifyBar.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']

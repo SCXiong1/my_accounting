@@ -39,7 +39,13 @@ export const useStatisticsStore = defineStore('statistics', () => {
   const categoryStats = ref<CategoryStatItem[]>([])
   const tagStats = ref<TagStatItem[]>([])
   const monthlyStats = ref<MonthlyStatItem[]>([])
+  const overview = ref({ today: 0, this_week: 0, this_month: 0, this_year: 0 })
   const loading = ref(false)
+
+  async function fetchOverview() {
+    const res = await api.get('/v1/statistics/overview')
+    overview.value = res.data
+  }
 
   async function fetchByCategory(start_time?: number, end_time?: number, tag_ids?: string) {
     loading.value = true
@@ -78,5 +84,5 @@ export const useStatisticsStore = defineStore('statistics', () => {
     }
   }
 
-  return { categoryStats, tagStats, monthlyStats, loading, fetchByCategory, fetchByTag, fetchMonthly }
+  return { categoryStats, tagStats, monthlyStats, overview, loading, fetchOverview, fetchByCategory, fetchByTag, fetchMonthly }
 })

@@ -1,12 +1,20 @@
 <script setup lang="ts">
-import { useRoute } from 'vue-router'
+import { watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { computed } from 'vue'
+import { useAuthStore } from './stores/auth'
 
 const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
 
 const showTabbar = computed(() => {
   const routesWithTabbar = ['home', 'expenses', 'statistics', 'profile']
   return routesWithTabbar.includes(String(route.name ?? ''))
+})
+
+watch(() => auth.token, (val) => {
+  if (!val) router.push('/login')
 })
 </script>
 

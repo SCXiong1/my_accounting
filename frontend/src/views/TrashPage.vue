@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import { showConfirmDialog } from 'vant'
 import api from '../lib/api'
 import { useExpenseStore } from '../stores/expense'
-import { showSuccess, showError } from '../lib/feedback'
+import { showSuccess, showError, withMutate } from '../lib/feedback'
 import { getErrorMessage } from '../lib/error'
 import ExpenseCard from '../components/ExpenseCard.vue'
 
@@ -25,15 +25,15 @@ async function loadDeleted() {
 
 async function handleRestore(id: number) {
   restoring.value = id
-  try {
-    await api.post(`/v1/expenses/${id}/restore`)
-    showSuccess('已恢复')
-    loadDeleted()
-  } catch (e: unknown) {
-    showError(getErrorMessage(e, '恢复失败'))
-  } finally {
-    restoring.value = null
-  }
+  await withMutate(
+    async () => {
+      await api.post(`/v1/expenses/${id}/restore`)
+      loadDeleted()
+    },
+    '已恢复',
+    '恢复失败',
+  )
+  restoring.value = null
 }
 
 async function handlePermanentDelete(id: number) {

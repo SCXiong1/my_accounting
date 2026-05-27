@@ -5,15 +5,11 @@ from models.expense_category import ExpenseCategory
 from models.expense import Expense
 from middleware.error_handler import NotFoundException, BadRequestException
 from schemas.category import CategoryCreate, CategoryUpdate, CategorySortRequest, CategoryResponse
+from .catalog_core import find_or_404, soft_delete, sort_models, list_ordered, next_display_order
 
 
 async def list_categories(db: AsyncSession, uid: int) -> list[CategoryResponse]:
-    result = await db.execute(
-        select(ExpenseCategory)
-        .where(ExpenseCategory.uid == uid, ExpenseCategory.deleted == 0)
-        .order_by(ExpenseCategory.display_order)
-    )
-    categories = result.scalars().all()
+    categories = await list_ordered(db, uid, ExpenseCategory)
 
     if not categories:
         return []
@@ -51,12 +47,7 @@ async def list_categories(db: AsyncSession, uid: int) -> list[CategoryResponse]:
 
 async def create_category(db: AsyncSession, uid: int, req: CategoryCreate) -> ExpenseCategory:
     now = int(time.time())
-
-    max_order = await db.execute(
-        select(func.coalesce(func.max(ExpenseCategory.display_order), -1))
-        .where(ExpenseCategory.uid == uid, ExpenseCategory.deleted == 0)
-    )
-    order = max_order.scalar() + 1
+    order = await next_display_order(db, uid, ExpenseCategory)
 
     cat = ExpenseCategory(
         uid=uid,
@@ -74,16 +65,7 @@ async def create_category(db: AsyncSession, uid: int, req: CategoryCreate) -> Ex
 
 
 async def update_category(db: AsyncSession, uid: int, category_id: int, req: CategoryUpdate) -> ExpenseCategory:
-    result = await db.execute(
-        select(ExpenseCategory).where(
-            ExpenseCategory.id == category_id,
-            ExpenseCategory.uid == uid,
-            ExpenseCategory.deleted == 0,
-        )
-    )
-    cat = result.scalar_one_or_none()
-    if not cat:
-        raise NotFoundException("分类")
+    cat = await find_or_404(db, uid, ExpenseCategory, category_id, "分类")
 
     now = int(time.time())
     if req.name is not None:
@@ -100,16 +82,7 @@ async def update_category(db: AsyncSession, uid: int, category_id: int, req: Cat
 
 
 async def delete_category(db: AsyncSession, uid: int, category_id: int) -> dict:
-    result = await db.execute(
-        select(ExpenseCategory).where(
-            ExpenseCategory.id == category_id,
-            ExpenseCategory.uid == uid,
-            ExpenseCategory.deleted == 0,
-        )
-    )
-    cat = result.scalar_one_or_none()
-    if not cat:
-        raise NotFoundException("分类")
+    await find_or_404(db, uid, ExpenseCategory, category_id, "分类")
 
     expense_count = await db.execute(
         select(func.count(Expense.id)).where(
@@ -121,39 +94,9 @@ async def delete_category(db: AsyncSession, uid: int, category_id: int) -> dict:
     if expense_count.scalar() > 0:
         raise BadRequestException("该分类下已有支出记录，无法删除")
 
-    now = int(time.time())
-    cat.deleted = 1
-    cat.deleted_at = now
-    cat.updated_at = now
-    await db.commit()
-    return {"deleted": True}
+    return await soft_delete(db, uid, ExpenseCategory, category_id, "分类")
 
 
 async def sort_categories(db: AsyncSession, uid: int, req: CategorySortRequest) -> list[ExpenseCategory]:
-    now = int(time.time())
-    cat_ids = [item.id for item in req.orders]
-    result = await db.execute(
-        select(ExpenseCategory).where(
-            ExpenseCategory.id.in_(cat_ids),
-            ExpenseCategory.uid == uid,
-            ExpenseCategory.deleted == 0,
-        )
-    )
-    cat_map = {c.id: c for c in result.scalars().all()}
-    for item in req.orders:
-        cat = cat_map.get(item.id)
-        if cat:
-            cat.display_order = item.display_order
-            cat.updated_at = now
-    await db.commit()
-
-    return await _list_models(db, uid)
-
-
-async def _list_models(db: AsyncSession, uid: int) -> list[ExpenseCategory]:
-    result = await db.execute(
-        select(ExpenseCategory)
-        .where(ExpenseCategory.uid == uid, ExpenseCategory.deleted == 0)
-        .order_by(ExpenseCategory.display_order)
-    )
-    return result.scalars().all()
+    orders = [{"id": item.id, "display_order": item.display_order} for item in req.orders]
+    return await sort_models(db, uid, ExpenseCategory, orders)

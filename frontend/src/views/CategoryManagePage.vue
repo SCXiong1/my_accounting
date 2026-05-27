@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { showConfirmDialog } from 'vant'
-import { showSuccess, showError, showTip } from '../lib/feedback'
+import { showError, showTip, withMutate } from '../lib/feedback'
 import { useCategoryStore, type Category } from '../stores/category'
 import { formatAmount } from '../core/format'
-import { getErrorMessage } from '../lib/error'
 
 const store = useCategoryStore()
 
@@ -44,28 +43,28 @@ showTip('请输入分类名称')
     return
   }
   submitting.value = true
-  try {
-    if (editing.value) {
-      await store.update(editing.value.id, {
-        name: formName.value.trim(),
-        icon: formIcon.value,
-        color: formColor.value,
-      })
-showSuccess('修改成功')
-    } else {
-      await store.create({
-        name: formName.value.trim(),
-        icon: formIcon.value,
-        color: formColor.value,
-      })
-showSuccess('创建成功')
-    }
-    showForm.value = false
-  } catch (e: unknown) {
-showError(getErrorMessage(e, '操作失败'))
-  } finally {
-    submitting.value = false
-  }
+  const isEdit = editing.value
+  await withMutate(
+    async () => {
+      if (isEdit) {
+        await store.update(editing.value!.id, {
+          name: formName.value.trim(),
+          icon: formIcon.value,
+          color: formColor.value,
+        })
+      } else {
+        await store.create({
+          name: formName.value.trim(),
+          icon: formIcon.value,
+          color: formColor.value,
+        })
+      }
+      showForm.value = false
+    },
+    isEdit ? '修改成功' : '创建成功',
+    '操作失败',
+  )
+  submitting.value = false
 }
 
 async function handleDelete(cat: Category) {
@@ -81,12 +80,11 @@ showError('该分类下有支出记录，无法删除')
   } catch {
     return // 用户取消
   }
-  try {
-    await store.remove(cat.id)
-showSuccess('已删除')
-  } catch (e: unknown) {
-showError(getErrorMessage(e, '删除失败'))
-  }
+  await withMutate(
+    () => store.remove(cat.id),
+    '已删除',
+    '删除失败',
+  )
 }
 </script>
 

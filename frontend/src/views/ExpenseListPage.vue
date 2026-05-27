@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { showConfirmDialog } from 'vant'
 import { getErrorMessage } from '../lib/error'
-import { showSuccess, showError } from '../lib/feedback'
+import { showError, withMutate } from '../lib/feedback'
 import { useExpenseStore } from '../stores/expense'
 import { useCategoryStore } from '../stores/category'
 import { useTagStore } from '../stores/tag'
 import ExpenseCard from '../components/ExpenseCard.vue'
+import FilterPicker from '../components/FilterPicker.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -110,6 +111,28 @@ function clearFilter() {
   filterKeyword.value = ''
 }
 
+const catColumns = computed(() => [
+  { text: '全部分类', value: -1 },
+  ...catStore.list.map(c => ({ text: c.name, value: c.id })),
+])
+
+const tagColumns = computed(() => [
+  { text: '全部标签', value: -1 },
+  ...tagStore.list.map(t => ({ text: t.name, value: t.id })),
+])
+
+function onCatSelect(val: number) {
+  filterCategoryId.value = val === -1 ? undefined : val
+  showCategoryFilter.value = false
+  applyFilter()
+}
+
+function onTagSelect(val: number) {
+  filterTagId.value = val === -1 ? undefined : val
+  showTagFilter.value = false
+  applyFilter()
+}
+
 function goAdd() {
   router.push('/expenses/add')
 }
@@ -127,12 +150,11 @@ async function handleDelete(id: number) {
   } catch {
     return // 用户取消
   }
-  try {
-    await store.remove(id)
-showSuccess('已删除')
-  } catch (e: unknown) {
-showError(getErrorMessage(e, '删除失败'))
-  }
+  await withMutate(
+    () => store.remove(id),
+    '已删除',
+    '删除失败',
+  )
 }
 </script>
 
@@ -225,23 +247,9 @@ showError(getErrorMessage(e, '删除失败'))
     </div>
 
     <!-- 分类筛选 -->
-    <van-popup v-model:show="showCategoryFilter" position="bottom" round>
-      <van-picker
-        :columns="[{ text: '全部分类', value: -1 }, ...catStore.list.map(c => ({ text: c.name, value: c.id }))]"
-        :default-index="0"
-        @confirm="({ selectedValues }: { selectedValues: number[] }) => { filterCategoryId = selectedValues[0] === -1 ? undefined : selectedValues[0]; showCategoryFilter = false; applyFilter() }"
-        @cancel="showCategoryFilter = false"
-      />
-    </van-popup>
+    <FilterPicker v-model:show="showCategoryFilter" :columns="catColumns" @select="onCatSelect" />
 
     <!-- 标签筛选 -->
-    <van-popup v-model:show="showTagFilter" position="bottom" round>
-      <van-picker
-        :columns="[{ text: '全部标签', value: -1 }, ...tagStore.list.map(t => ({ text: t.name, value: t.id }))]"
-        :default-index="0"
-        @confirm="({ selectedValues }: { selectedValues: number[] }) => { filterTagId = selectedValues[0] === -1 ? undefined : selectedValues[0]; showTagFilter = false; applyFilter() }"
-        @cancel="showTagFilter = false"
-      />
-    </van-popup>
+    <FilterPicker v-model:show="showTagFilter" :columns="tagColumns" @select="onTagSelect" />
   </div>
 </template>
