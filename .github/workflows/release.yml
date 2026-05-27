@@ -30,4 +30,3 @@ jobs:
           push: true
           tags: |
             ghcr.io/scxiong1/my_accounting:latest
-            ghcr.io/scxiong1/my_accounting:${{ github.event.release.tag_name }}
