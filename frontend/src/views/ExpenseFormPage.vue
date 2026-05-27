@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { showSuccess, showError, showTip } from '../lib/feedback'
+import { showTip, withMutate } from '../lib/feedback'
 import { useExpenseStore } from '../stores/expense'
 import { useCategoryStore } from '../stores/category'
 import { useTagStore } from '../stores/tag'
-import { getErrorMessage } from '../lib/error'
 import { formatDate } from '../core/time'
 import AmountField from '../components/AmountField.vue'
 import CategoryPicker from '../components/CategoryPicker.vue'
@@ -29,7 +28,7 @@ const submitting = ref(false)
 const loading = ref(false)
 
 const showDatetimePicker = ref(false)
-const dateDisplay = ref(formatDate(transactionTime.value))
+const dateDisplay = computed(() => formatDate(transactionTime.value))
 
 // 校验状态
 const amountError = ref('')
@@ -51,7 +50,6 @@ onMounted(async () => {
       tagIds.value = expense.tags.map((t) => t.id)
       transactionTime.value = expense.transaction_time
       note.value = expense.note
-      dateDisplay.value = formatDate(expense.transaction_time)
     } finally {
       loading.value = false
     }
@@ -62,7 +60,6 @@ function onDatetimeConfirm({ selectedValues }: { selectedValues: string[] }) {
   const [y, m, d] = selectedValues.map(Number)
   const date = new Date(y, m - 1, d, 12, 0, 0)
   transactionTime.value = Math.floor(date.getTime() / 1000)
-  dateDisplay.value = formatDate(transactionTime.value)
   showDatetimePicker.value = false
 }
 
@@ -90,27 +87,27 @@ async function handleSubmit() {
   if (!validate()) return
 
   submitting.value = true
-  try {
-    const data = {
-      amount: amount.value,
-      category_id: categoryId.value as number,
-      tag_ids: tagIds.value,
-      transaction_time: transactionTime.value,
-      note: note.value.trim(),
-    }
-    if (isEdit && expenseId) {
-      await store.updateExpense(expenseId, data)
-      showSuccess('修改成功')
-    } else {
-      await store.create(data as { amount: number; category_id: number; tag_ids: number[]; transaction_time: number; note: string })
-      showSuccess('记账成功')
-    }
-    router.back()
-  } catch (e: unknown) {
-showError(getErrorMessage(e, '保存失败'))
-  } finally {
-    submitting.value = false
-  }
+  const edit = isEdit
+  await withMutate(
+    async () => {
+      const data = {
+        amount: amount.value,
+        category_id: categoryId.value as number,
+        tag_ids: tagIds.value,
+        transaction_time: transactionTime.value,
+        note: note.value.trim(),
+      }
+      if (edit && expenseId) {
+        await store.updateExpense(expenseId, data)
+      } else {
+        await store.create(data as { amount: number; category_id: number; tag_ids: number[]; transaction_time: number; note: string })
+      }
+      router.back()
+    },
+    edit ? '修改成功' : '记账成功',
+    '保存失败',
+  )
+  submitting.value = false
 }
 </script>
 

@@ -4,17 +4,13 @@ from sqlalchemy import select, func
 from models.expense_tag import ExpenseTag
 from models.expense_tag_index import ExpenseTagIndex
 from models.expense import Expense
-from middleware.error_handler import NotFoundException, BadRequestException
+from middleware.error_handler import BadRequestException
 from schemas.tag import TagCreate, TagUpdate, TagSortRequest, TagResponse
+from .catalog_core import find_or_404, soft_delete, sort_models, list_ordered, next_display_order
 
 
 async def list_tags(db: AsyncSession, uid: int) -> list[TagResponse]:
-    result = await db.execute(
-        select(ExpenseTag)
-        .where(ExpenseTag.uid == uid, ExpenseTag.deleted == 0)
-        .order_by(ExpenseTag.display_order)
-    )
-    tags = result.scalars().all()
+    tags = await list_ordered(db, uid, ExpenseTag)
 
     if not tags:
         return []
@@ -29,6 +25,7 @@ async def list_tags(db: AsyncSession, uid: int) -> list[TagResponse]:
         .where(
             ExpenseTagIndex.tag_id.in_(tag_ids),
             ExpenseTagIndex.uid == uid,
+            ExpenseTagIndex.deleted == 0,
             Expense.deleted == 0,
         )
         .group_by(ExpenseTagIndex.tag_id)
@@ -59,12 +56,7 @@ async def create_tag(db: AsyncSession, uid: int, req: TagCreate) -> ExpenseTag:
         raise BadRequestException(f"标签「{req.name.strip()}」已存在，请勿重复创建")
 
     now = int(time.time())
-
-    max_order = await db.execute(
-        select(func.coalesce(func.max(ExpenseTag.display_order), -1))
-        .where(ExpenseTag.uid == uid, ExpenseTag.deleted == 0)
-    )
-    order = max_order.scalar() + 1
+    order = await next_display_order(db, uid, ExpenseTag)
 
     tag = ExpenseTag(
         uid=uid,
@@ -80,16 +72,7 @@ async def create_tag(db: AsyncSession, uid: int, req: TagCreate) -> ExpenseTag:
 
 
 async def update_tag(db: AsyncSession, uid: int, tag_id: int, req: TagUpdate) -> ExpenseTag:
-    result = await db.execute(
-        select(ExpenseTag).where(
-            ExpenseTag.id == tag_id,
-            ExpenseTag.uid == uid,
-            ExpenseTag.deleted == 0,
-        )
-    )
-    tag = result.scalar_one_or_none()
-    if not tag:
-        raise NotFoundException("标签")
+    tag = await find_or_404(db, uid, ExpenseTag, tag_id, "标签")
 
     now = int(time.time())
     if req.name is not None:
@@ -102,44 +85,9 @@ async def update_tag(db: AsyncSession, uid: int, tag_id: int, req: TagUpdate) ->
 
 
 async def delete_tag(db: AsyncSession, uid: int, tag_id: int) -> dict:
-    result = await db.execute(
-        select(ExpenseTag).where(
-            ExpenseTag.id == tag_id,
-            ExpenseTag.uid == uid,
-            ExpenseTag.deleted == 0,
-        )
-    )
-    tag = result.scalar_one_or_none()
-    if not tag:
-        raise NotFoundException("标签")
-
-    now = int(time.time())
-    tag.deleted = 1
-    tag.deleted_at = now
-    tag.updated_at = now
-    await db.commit()
-    return {"deleted": True}
+    return await soft_delete(db, uid, ExpenseTag, tag_id, "标签")
 
 
 async def sort_tags(db: AsyncSession, uid: int, req: TagSortRequest) -> list[ExpenseTag]:
-    now = int(time.time())
-    for item in req.orders:
-        result = await db.execute(
-            select(ExpenseTag).where(
-                ExpenseTag.id == item.id,
-                ExpenseTag.uid == uid,
-                ExpenseTag.deleted == 0,
-            )
-        )
-        tag = result.scalar_one_or_none()
-        if tag:
-            tag.display_order = item.display_order
-            tag.updated_at = now
-    await db.commit()
-
-    result = await db.execute(
-        select(ExpenseTag)
-        .where(ExpenseTag.uid == uid, ExpenseTag.deleted == 0)
-        .order_by(ExpenseTag.display_order)
-    )
-    return result.scalars().all()
+    orders = [{"id": item.id, "display_order": item.display_order} for item in req.orders]
+    return await sort_models(db, uid, ExpenseTag, orders)

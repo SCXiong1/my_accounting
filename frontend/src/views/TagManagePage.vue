@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { showConfirmDialog } from 'vant'
-import { showSuccess, showError, showTip } from '../lib/feedback'
+import { showTip, withMutate } from '../lib/feedback'
 import { useTagStore, type Tag } from '../stores/tag'
-import { getErrorMessage } from '../lib/error'
 
 const store = useTagStore()
 
@@ -34,20 +33,20 @@ showTip('请输入标签名称')
     return
   }
   submitting.value = true
-  try {
-    if (editing.value) {
-      await store.update(editing.value.id, tagName.value.trim())
-showSuccess('修改成功')
-    } else {
-      await store.create(tagName.value.trim())
-showSuccess('创建成功')
-    }
-    dialogVisible.value = false
-  } catch (e: unknown) {
-showError(getErrorMessage(e, '操作失败'))
-  } finally {
-    submitting.value = false
-  }
+  const isEdit = editing.value
+  await withMutate(
+    async () => {
+      if (isEdit) {
+        await store.update(editing.value!.id, tagName.value.trim())
+      } else {
+        await store.create(tagName.value.trim())
+      }
+      dialogVisible.value = false
+    },
+    isEdit ? '修改成功' : '创建成功',
+    '操作失败',
+  )
+  submitting.value = false
 }
 
 async function handleDelete(tag: Tag) {
@@ -59,12 +58,11 @@ async function handleDelete(tag: Tag) {
   } catch {
     return // 用户取消
   }
-  try {
-    await store.remove(tag.id)
-showSuccess('已删除')
-  } catch (e: unknown) {
-showError(getErrorMessage(e, '删除失败'))
-  }
+  await withMutate(
+    () => store.remove(tag.id),
+    '已删除',
+    '删除失败',
+  )
 }
 </script>
 

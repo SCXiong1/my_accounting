@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { useCategoryStore } from '../stores/category'
 
 const props = defineProps<{ modelValue: number | null }>()
@@ -13,11 +13,7 @@ function catName(id: number): string {
   return cat ? `${cat.icon} ${cat.name}` : '请选择分类'
 }
 
-const selectedName = ref(catName(props.modelValue as number))
-
-watch(() => props.modelValue, (id) => {
-  selectedName.value = catName(id as number)
-})
+const selectedName = computed(() => catName(props.modelValue as number))
 
 const pickerColumns = computed(() =>
   store.list.map((cat) => ({
@@ -29,7 +25,6 @@ const pickerColumns = computed(() =>
 function onSelect(id: number) {
   const cat = store.list.find((c) => c.id === id)
   if (cat) {
-    selectedName.value = `${cat.icon} ${cat.name}`
     emit('update:modelValue', id)
   }
   showPicker.value = false

@@ -1,6 +1,6 @@
 import time
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, delete, or_
+from sqlalchemy import select, func, update, or_
 from models.expense import Expense
 from models.expense_category import ExpenseCategory
 from models.expense_tag import ExpenseTag
@@ -68,6 +68,7 @@ def _apply_keyword(query, keyword: str | None, uid: int):
         ExpenseTag.uid == uid,
         ExpenseTag.name.contains(kw),
         ExpenseTag.deleted == 0,
+        ExpenseTagIndex.deleted == 0,
     ).scalar_subquery()
     conditions.append(Expense.id.in_(tag_sub))
 
@@ -107,6 +108,7 @@ async def list_expenses(
         tag_subquery = select(ExpenseTagIndex.expense_id).where(
             ExpenseTagIndex.tag_id == tag_id,
             ExpenseTagIndex.uid == uid,
+            ExpenseTagIndex.deleted == 0,
         ).scalar_subquery()
         query = query.where(Expense.id.in_(tag_subquery))
         count_query = count_query.where(Expense.id.in_(tag_subquery))
@@ -189,7 +191,6 @@ async def create_expense(db: AsyncSession, uid: int, req: ExpenseCreate) -> Expe
         ))
 
     await db.commit()
-    await db.refresh(expense)
 
     return await get_expense(db, uid, expense.id)
 
@@ -231,7 +232,10 @@ async def update_expense(db: AsyncSession, uid: int, expense_id: int, req: Expen
         await _validate_tags(db, uid, req.tag_ids)
 
         await db.execute(
-            delete(ExpenseTagIndex).where(ExpenseTagIndex.expense_id == expense_id)
+            update(ExpenseTagIndex).where(
+                ExpenseTagIndex.expense_id == expense_id,
+                ExpenseTagIndex.deleted == 0,
+            ).values(deleted=1, deleted_at=now)
         )
         for tag_id in req.tag_ids:
             db.add(ExpenseTagIndex(
@@ -243,7 +247,6 @@ async def update_expense(db: AsyncSession, uid: int, expense_id: int, req: Expen
 
     expense.updated_at = now
     await db.commit()
-    await db.refresh(expense)
 
     return await get_expense(db, uid, expense.id)
 
@@ -260,9 +263,18 @@ async def restore_expense(db: AsyncSession, uid: int, expense_id: int) -> dict:
     if not expense:
         raise NotFoundException("支出记录")
 
+    now = int(time.time())
     expense.deleted = 0
     expense.deleted_at = 0
-    expense.updated_at = int(time.time())
+    expense.updated_at = now
+
+    await db.execute(
+        update(ExpenseTagIndex).where(
+            ExpenseTagIndex.expense_id == expense_id,
+            ExpenseTagIndex.deleted == 1,
+        ).values(deleted=0, deleted_at=0)
+    )
+
     await db.commit()
     return {"deleted": False}
 
@@ -283,6 +295,14 @@ async def delete_expense(db: AsyncSession, uid: int, expense_id: int) -> dict:
     expense.deleted = 1
     expense.deleted_at = now
     expense.updated_at = now
+
+    await db.execute(
+        update(ExpenseTagIndex).where(
+            ExpenseTagIndex.expense_id == expense_id,
+            ExpenseTagIndex.deleted == 0,
+        ).values(deleted=1, deleted_at=now)
+    )
+
     await db.commit()
     return {"deleted": True}
 
@@ -321,6 +341,7 @@ async def _fill_relations(db: AsyncSession, uid: int, items: list[ExpenseRespons
             ).where(
                 ExpenseTagIndex.expense_id.in_(expense_ids),
                 ExpenseTagIndex.uid == uid,
+                ExpenseTagIndex.deleted == 0,
                 ExpenseTag.deleted == 0,
             )
         )

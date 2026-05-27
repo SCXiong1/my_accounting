@@ -17,3 +17,5 @@ class ExpenseTagIndex(Base):
     expense_id: Mapped[int] = mapped_column(Integer, ForeignKey("expense.id"), nullable=False)
     tag_id: Mapped[int] = mapped_column(Integer, ForeignKey("expense_tag.id"), nullable=False)
     created_at: Mapped[int] = mapped_column(Integer, nullable=False, default=lambda: int(time.time()))
+    deleted: Mapped[int] = mapped_column(Integer, nullable=False, default=0, index=True)
+    deleted_at: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

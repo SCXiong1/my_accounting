@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { showConfirmDialog } from 'vant'
+import api from '../lib/api'
 import { useExpenseStore } from '../stores/expense'
-import { formatAmount } from '../core/format'
-import { formatDate } from '../core/time'
-import { showSuccess, showError } from '../lib/feedback'
+import { showSuccess, showError, withMutate } from '../lib/feedback'
 import { getErrorMessage } from '../lib/error'
+import ExpenseCard from '../components/ExpenseCard.vue'
 
 const store = useExpenseStore()
 const restoring = ref<number | null>(null)
@@ -25,15 +25,15 @@ async function loadDeleted() {
 
 async function handleRestore(id: number) {
   restoring.value = id
-  try {
-    await store.restore(id)
-    showSuccess('已恢复')
-    loadDeleted()
-  } catch (e: unknown) {
-    showError(getErrorMessage(e, '恢复失败'))
-  } finally {
-    restoring.value = null
-  }
+  await withMutate(
+    async () => {
+      await api.post(`/v1/expenses/${id}/restore`)
+      loadDeleted()
+    },
+    '已恢复',
+    '恢复失败',
+  )
+  restoring.value = null
 }
 
 async function handlePermanentDelete(id: number) {
@@ -61,31 +61,14 @@ async function handlePermanentDelete(id: number) {
     </div>
 
     <div v-for="expense in store.items" :key="expense.id"
-      style="display: flex; align-items: center; padding: 12px 16px; background: #fff; border-bottom: 1px solid #f5f5f5;">
-      <span style="font-size: 22px; margin-right: 10px; opacity: 0.5">
-        {{ expense.category?.icon || '📦' }}
-      </span>
-      <div style="flex: 1; min-width: 0;">
-        <div style="font-size: 14px; color: #323233;">
-          {{ expense.category?.name || '未分类' }}
-          <template v-if="expense.tags.length > 0">
-            <span style="color: #969799;"> · </span>
-            <span style="font-size: 12px; color: #1989fa;">{{ expense.tags.map(t => t.name).join('、') }}</span>
-          </template>
-        </div>
-        <div style="font-size: 12px; color: #c8c9cc;">
-          {{ formatDate(expense.transaction_time) }}
-          <template v-if="expense.note"> · {{ expense.note }}</template>
-        </div>
-      </div>
-      <div style="font-size: 16px; font-weight: bold; color: #323233; margin-right: 12px;">
-        {{ formatAmount(expense.amount) }}
-      </div>
+      style="display: flex; align-items: center; background: #fff; border-bottom: 1px solid #f5f5f5;">
+      <ExpenseCard :expense="expense" style="flex: 1;" />
       <van-button
         size="small"
         type="primary"
         :loading="restoring === expense.id"
         @click="handleRestore(expense.id)"
+        style="margin-right: 12px; flex-shrink: 0;"
       >
         恢复
       </van-button>

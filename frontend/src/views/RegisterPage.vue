@@ -2,8 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { getErrorMessage } from '../lib/error'
-import { showSuccess, showError, showTip } from '../lib/feedback'
+import { showTip, withMutate } from '../lib/feedback'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -25,15 +24,15 @@ async function handleRegister() {
     return
   }
   loading.value = true
-  try {
-    await auth.register(username.value, password.value, nickname.value || undefined, email.value)
-    showSuccess('注册成功')
-    setTimeout(() => router.push('/'), 500)
-  } catch (e: unknown) {
-    showError(getErrorMessage(e, '注册失败'))
-  } finally {
-    loading.value = false
-  }
+  await withMutate(
+    async () => {
+      await auth.register(username.value, password.value, nickname.value || undefined, email.value)
+      setTimeout(() => router.push('/'), 500)
+    },
+    '注册成功',
+    '注册失败',
+  )
+  loading.value = false
 }
 </script>
 

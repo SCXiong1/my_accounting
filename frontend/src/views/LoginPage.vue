@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { getErrorMessage } from '../lib/error'
-import { showSuccess, showError, showTip } from '../lib/feedback'
+import { showSuccess, showError, showTip, withMutate } from '../lib/feedback'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -18,15 +18,15 @@ showTip('请填写用户名和密码')
     return
   }
   loading.value = true
-  try {
-    await auth.login(username.value, password.value)
-showSuccess('登录成功')
-    setTimeout(() => router.push('/'), 500)
-  } catch (e: unknown) {
-showError(getErrorMessage(e, '登录失败'))
-  } finally {
-    loading.value = false
-  }
+  await withMutate(
+    async () => {
+      await auth.login(username.value, password.value)
+      setTimeout(() => router.push('/'), 500)
+    },
+    '登录成功',
+    '登录失败',
+  )
+  loading.value = false
 }
 
 const showForgot = ref(false)
