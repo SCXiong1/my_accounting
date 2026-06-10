@@ -1,12 +1,41 @@
+# Claude Code
 .claude/
 CLAUDE.md
+
+# Python
 __pycache__/
 *.pyc
 .venv/
 venv/
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# Node
 node_modules/
 dist/
+
+# Environment
 .env
+.env.*
+
+# Data
 *.db
 data/
+
+# Build artifacts
 backend/static/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Project docs (local)
+项目说明书.md

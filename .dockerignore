@@ -1,14 +1,36 @@
-node_modules/
-__pycache__/
-*.pyc
+# Git
 .git/
 .gitignore
-*.db
-data/
-dist/
-.venv/
-venv/
+
+# Claude Code
 .claude/
 CLAUDE.md
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# Node
+node_modules/
+dist/
+
+# Environment
+.env
+.env.*
+
+# Data
+*.db
+data/
+
+# Docs (not needed in image)
 *.md
-!requirements.txt
+
+# OS
+.DS_Store
+Thumbs.db
