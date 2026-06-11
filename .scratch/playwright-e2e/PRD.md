@@ -1,6 +1,6 @@
 # PRD: Playwright 移动端浏览器端到端测试
 
-Status: ready-for-agent
+Status: in-progress (S1 ✅ S2 ✅ S3-S7 待实现)
 
 ## Problem Statement
 
