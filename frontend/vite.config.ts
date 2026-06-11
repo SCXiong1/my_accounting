@@ -5,6 +5,8 @@ import Components from 'unplugin-vue-components/vite'
 import { VantResolver } from 'unplugin-vue-components/resolvers'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const isE2E = process.env.E2E_TEST === 'true'
+
 export default defineConfig({
   plugins: [
     vue(),
@@ -25,7 +27,7 @@ export default defineConfig({
       ],
       dts: 'src/components.d.ts',
     }),
-    VitePWA({
+    ...(isE2E ? [] : [VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
@@ -40,7 +42,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg}'],
       },
-    }),
+    })]),
   ],
   server: {
     host: '0.0.0.0',

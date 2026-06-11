@@ -1,0 +1,13 @@
+{
+  "name": "ezexpense-e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "rm -f ../backend/data/e2e-test.db && npx playwright test",
+    "test:ui": "rm -f ../backend/data/e2e-test.db && npx playwright test --ui",
+    "test:headed": "rm -f ../backend/data/e2e-test.db && npx playwright test --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0"
+  }
+}

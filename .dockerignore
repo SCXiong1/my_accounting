@@ -31,6 +31,9 @@ data/
 # Docs (not needed in image)
 *.md
 
+# E2E tests
+e2e/
+
 # OS
 .DS_Store
 Thumbs.db

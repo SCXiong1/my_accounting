@@ -67,6 +67,12 @@ cd backend
 # Frontend tests
 cd frontend
 npx vitest
+
+# E2E tests (requires Playwright browsers installed once)
+cd e2e
+npm install
+npx playwright install --with-deps chromium webkit  # first time only
+npm test
 ```
 
 ### Database migrations
@@ -94,6 +100,12 @@ frontend/
     composables/ # Vue composables (charts, filters)
     lib/         # HTTP client, token, notifications
     core/        # Pure utility functions (format, time)
+e2e/
+  playwright.config.ts  # Playwright config (webServer, devices, projects)
+  global-setup.ts       # Test data seeding + auth state
+  fixtures/             # Custom test fixtures
+  helpers/              # Gesture helpers, API client
+  tests/                # 7 spec files (one per user story)
 ```
 
 ## Configuration
