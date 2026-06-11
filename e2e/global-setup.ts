@@ -121,7 +121,7 @@ async function globalSetup(config: FullConfig) {
       {
         origin: baseURL!,
         localStorage: [
-          { name: 'token', value: token },
+          { name: 'ezexpense_token', value: token },
           { name: 'user', value: JSON.stringify(user) },
         ],
       },

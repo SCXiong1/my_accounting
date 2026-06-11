@@ -2,6 +2,7 @@ import { Page, Locator } from '@playwright/test';
 
 /**
  * 向左滑动触发 Vant van-swipe-cell 删除
+ * 注意：滑动结束后移开鼠标，避免触发父元素的 click 事件
  */
 export async function swipeCellLeft(page: Page, target: Locator) {
   const box = await target.boundingBox();
@@ -13,6 +14,8 @@ export async function swipeCellLeft(page: Page, target: Locator) {
   await page.mouse.down();
   await page.mouse.move(endX, y, { steps: 10 });
   await page.mouse.up();
+  // 移开鼠标到安全区域，避免 mouseup 触发 click
+  await page.mouse.move(0, 0);
 }
 
 /**
@@ -27,9 +30,11 @@ export async function pullDown(page: Page) {
 
 /**
  * Vant Picker 选择选项
+ * Picker 选项格式为 "{icon} {name}"，如 "🍽️ 餐饮"
+ * 使用 substring 匹配，支持传入纯名称如 "餐饮"
  */
 export async function selectPickerOption(page: Page, optionText: string) {
-  await page.getByText(optionText, { exact: true }).click();
+  await page.locator('.van-picker-column').getByText(optionText).first().click();
   const confirmBtn = page.locator('.van-picker__confirm');
   if (await confirmBtn.isVisible()) {
     await confirmBtn.click();

@@ -231,6 +231,7 @@ async def update_expense(db: AsyncSession, uid: int, expense_id: int, req: Expen
     if req.tag_ids is not None:
         await _validate_tags(db, uid, req.tag_ids)
 
+        # 软删除当前标签关联
         await db.execute(
             update(ExpenseTagIndex).where(
                 ExpenseTagIndex.expense_id == expense_id,
@@ -238,12 +239,25 @@ async def update_expense(db: AsyncSession, uid: int, expense_id: int, req: Expen
             ).values(deleted=1, deleted_at=now)
         )
         for tag_id in req.tag_ids:
-            db.add(ExpenseTagIndex(
-                uid=uid,
-                expense_id=expense_id,
-                tag_id=tag_id,
-                created_at=now,
-            ))
+            # 检查是否有软删除的记录，有则恢复
+            existing = await db.execute(
+                select(ExpenseTagIndex).where(
+                    ExpenseTagIndex.expense_id == expense_id,
+                    ExpenseTagIndex.tag_id == tag_id,
+                    ExpenseTagIndex.deleted == 1,
+                )
+            )
+            row = existing.scalar_one_or_none()
+            if row:
+                row.deleted = 0
+                row.deleted_at = 0
+            else:
+                db.add(ExpenseTagIndex(
+                    uid=uid,
+                    expense_id=expense_id,
+                    tag_id=tag_id,
+                    created_at=now,
+                ))
 
     expense.updated_at = now
     await db.commit()

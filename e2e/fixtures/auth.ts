@@ -33,4 +33,18 @@ export const testNoAuth = base.extend<{}>({
   },
 });
 
+const storageStatePath = path.join(__dirname, '..', 'storage-state.json');
+
+export const testAuth = base.extend<{}>({
+  context: async ({ browser }, use) => {
+    const context = await browser.newContext({ storageState: storageStatePath });
+    await use(context);
+    await context.close();
+  },
+  page: async ({ context }, use) => {
+    const page = await context.newPage();
+    await use(page);
+  },
+});
+
 export { expect };
