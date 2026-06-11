@@ -2,3 +2,5 @@ test-results/
 playwright-report/
 .auth/
 node_modules/
+storage-state.json
+test-metadata.json
