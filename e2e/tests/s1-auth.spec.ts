@@ -1,3 +1,4 @@
+// 注意：S1 使用原生 test 而非 testAuth fixture，因为认证流程测试需要未认证状态
 import { test, expect } from '@playwright/test';
 
 test.describe('S1: 认证流程', () => {

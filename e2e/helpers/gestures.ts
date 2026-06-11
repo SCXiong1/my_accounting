@@ -2,20 +2,17 @@ import { Page, Locator } from '@playwright/test';
 
 /**
  * 向左滑动触发 Vant van-swipe-cell 删除
- * 注意：滑动结束后移开鼠标，避免触发父元素的 click 事件
+ * 通过 Vue 3 组件实例调用 SwipeCell.open()
  */
 export async function swipeCellLeft(page: Page, target: Locator) {
-  const box = await target.boundingBox();
-  if (!box) throw new Error('无法获取元素位置');
-  const startX = box.x + box.width * 0.8;
-  const endX = box.x + box.width * 0.2;
-  const y = box.y + box.height / 2;
-  await page.mouse.move(startX, y);
-  await page.mouse.down();
-  await page.mouse.move(endX, y, { steps: 10 });
-  await page.mouse.up();
-  // 移开鼠标到安全区域，避免 mouseup 触发 click
-  await page.mouse.move(0, 0);
+  const swipeCell = target.locator('xpath=ancestor::*[contains(concat(" ", @class, " "), " van-swipe-cell ")]');
+  await swipeCell.evaluate((el) => {
+    // Vue 3: 组件实例在 __vueParentComponent 上
+    const comp = (el as any).__vueParentComponent;
+    if (comp?.proxy?.open) {
+      comp.proxy.open('right');
+    }
+  });
 }
 
 /**

@@ -25,7 +25,7 @@ testAuth.describe('S2: 账单 CRUD', () => {
 
     // 选择标签：餐饮
     await page.getByRole('button', { name: /标签/ }).click();
-    await page.getByText('餐饮', { exact: true }).click();
+    await page.locator('.van-popup .van-checkbox-group .van-cell', { hasText: '餐饮' }).click();
     await page.getByRole('button', { name: '确定' }).click();
 
     // 填写备注
@@ -97,8 +97,9 @@ testAuth.describe('S2: 账单 CRUD', () => {
 
     await page.getByRole('button', { name: /标签/ }).click();
     await expect(page.getByText('选择标签')).toBeVisible();
-    await page.getByText('餐饮', { exact: true }).click();
-    await page.getByText('交通', { exact: true }).click();
+    const popup = page.locator('.van-popup .van-checkbox-group');
+    await popup.locator('.van-cell', { hasText: '餐饮' }).click();
+    await popup.locator('.van-cell', { hasText: '交通' }).click();
     await page.getByRole('button', { name: '确定' }).click();
 
     await page.getByRole('button', { name: '保存修改' }).click();
@@ -140,7 +141,7 @@ testAuth.describe('S2: 账单 CRUD', () => {
     await expect(card.locator('.expense-card__amount')).toContainText('30.00');
   });
 
-  testAuth('删除账单：API 删除 → 验证消失', async ({ page, request }) => {
+  testAuth('删除账单：左滑 → 删除 → 确认 → 验证消失', async ({ page, request }) => {
     const metadata = loadMetadata();
     const api = await apiClient(request);
     const note = `待删除_${uid}`;
@@ -158,11 +159,20 @@ testAuth.describe('S2: 账单 CRUD', () => {
     await page.goto('/expenses');
     await expect(page.getByText(note)).toBeVisible();
 
-    const deleteRes = await api.delete(`/api/v1/expenses/${expense.id}`);
-    expect(deleteRes.ok()).toBeTruthy();
+    // 左滑该账单卡片
+    const card = page.locator('.expense-card', { hasText: note });
+    await swipeCellLeft(page, card);
+    await page.waitForTimeout(300);
 
-    await page.reload();
-    await expect(page.getByText('支出记录')).toBeVisible();
+    // 点击删除按钮（左滑后露出的按钮）
+    const deleteBtn = page.locator('.van-button--danger').filter({ hasText: '删除' }).first();
+    await deleteBtn.click();
+
+    // 确认删除对话框
+    await expect(page.getByText('确定删除这条支出记录吗？')).toBeVisible();
+    await page.getByRole('button', { name: '确认' }).click();
+
+    // 验证账单消失
     await expect(page.getByText(note)).not.toBeVisible();
   });
 
@@ -235,7 +245,7 @@ testAuth.describe('S2: 账单 CRUD', () => {
 
     await page.getByRole('button', { name: /标签/ }).click();
     await expect(page.getByText('选择标签')).toBeVisible();
-    await page.getByText('交通', { exact: true }).click();
+    await page.locator('.van-popup .van-checkbox-group .van-cell', { hasText: '交通' }).click();
     await page.getByRole('button', { name: '确定' }).click();
 
     await page.getByRole('button', { name: '保存修改' }).click();
@@ -267,7 +277,7 @@ testAuth.describe('S2: 账单 CRUD', () => {
 
     await page.getByRole('button', { name: /标签/ }).click();
     await expect(page.getByText('选择标签')).toBeVisible();
-    await page.getByText('餐饮', { exact: true }).click();
+    await page.locator('.van-popup .van-checkbox-group .van-cell', { hasText: '餐饮' }).click();
     await page.getByRole('button', { name: '确定' }).click();
 
     await page.getByRole('button', { name: '保存修改' }).click();
