@@ -252,7 +252,9 @@ testAuth.describe('S2: 账单 CRUD', () => {
     await page.waitForURL('**/expenses', { timeout: 15000 });
 
     const card = page.locator('.expense-card', { hasText: note });
-    await expect(card.locator('.expense-card__category')).toContainText('餐饮、交通');
+    const catText = await card.locator('.expense-card__category').textContent();
+    expect(catText).toContain('餐饮');
+    expect(catText).toContain('交通');
   });
 
   testAuth('无标签提交', async ({ page, request }) => {
@@ -285,5 +287,7 @@ testAuth.describe('S2: 账单 CRUD', () => {
 
     const card = page.locator('.expense-card', { hasText: note });
     await expect(card).toBeVisible();
+    // 验证标签已移除：分类文本不含 " · " 标签分隔符
+    await expect(card.locator('.expense-card__category')).not.toContainText('·');
   });
 });

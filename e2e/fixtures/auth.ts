@@ -22,28 +22,26 @@ export function loadMetadata(): TestMetadata {
 }
 
 export const testNoAuth = base.extend<{}>({
-  context: async ({ browser }, use) => {
-    const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+  context: async ({ browser }, use, testInfo) => {
+    const context = await browser.newContext({
+      ...testInfo.project.use,
+      storageState: { cookies: [], origins: [] },
+    });
     await use(context);
     await context.close();
-  },
-  page: async ({ context }, use) => {
-    const page = await context.newPage();
-    await use(page);
   },
 });
 
 const storageStatePath = path.join(__dirname, '..', 'storage-state.json');
 
 export const testAuth = base.extend<{}>({
-  context: async ({ browser }, use) => {
-    const context = await browser.newContext({ storageState: storageStatePath });
+  context: async ({ browser }, use, testInfo) => {
+    const context = await browser.newContext({
+      ...testInfo.project.use,
+      storageState: storageStatePath,
+    });
     await use(context);
     await context.close();
-  },
-  page: async ({ context }, use) => {
-    const page = await context.newPage();
-    await use(page);
   },
 });
 

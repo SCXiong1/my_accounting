@@ -229,6 +229,7 @@ async def update_expense(db: AsyncSession, uid: int, expense_id: int, req: Expen
         expense.note = req.note
 
     if req.tag_ids is not None:
+        req.tag_ids = list(set(req.tag_ids))
         await _validate_tags(db, uid, req.tag_ids)
 
         # 软删除当前标签关联

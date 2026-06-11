@@ -102,11 +102,7 @@ async function handleSubmit() {
       } else {
         await store.create(data as { amount: number; category_id: number; tag_ids: number[]; transaction_time: number; note: string })
       }
-      if (window.history.length > 1) {
-        router.back()
-      } else {
-        router.push('/expenses')
-      }
+      router.back()
     },
     edit ? '修改成功' : '记账成功',
     '保存失败',

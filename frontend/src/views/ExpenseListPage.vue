@@ -152,6 +152,10 @@ function onPointerMove(e: PointerEvent) {
   }
 }
 
+function onPointerUp() {
+  setTimeout(() => { isDragging.value = false }, 0)
+}
+
 function goEdit(id: number) {
   if (isDragging.value) return
   router.push(`/expenses/${id}/edit`)
@@ -236,6 +240,7 @@ async function handleDelete(id: number) {
         <div v-for="expense in store.items" :key="expense.id"
           @pointerdown="onPointerDown"
           @pointermove="onPointerMove"
+          @pointerup="onPointerUp"
           @click="goEdit(expense.id)">
           <van-swipe-cell>
             <ExpenseCard :expense="expense" />

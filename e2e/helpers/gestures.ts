@@ -7,11 +7,11 @@ import { Page, Locator } from '@playwright/test';
 export async function swipeCellLeft(page: Page, target: Locator) {
   const swipeCell = target.locator('xpath=ancestor::*[contains(concat(" ", @class, " "), " van-swipe-cell ")]');
   await swipeCell.evaluate((el) => {
-    // Vue 3: 组件实例在 __vueParentComponent 上
     const comp = (el as any).__vueParentComponent;
-    if (comp?.proxy?.open) {
-      comp.proxy.open('right');
+    if (!comp?.proxy?.open) {
+      throw new Error('swipeCellLeft: 无法访问 SwipeCell.open()，Vue 3 内部 API 可能已变更');
     }
+    comp.proxy.open('right');
   });
 }
 

@@ -92,7 +92,7 @@ async function globalSetup(config: FullConfig) {
     { amount: 3500, note: '午餐', category_id: 1, tag_ids: [tags[0].id], days_ago: 0 },
     { amount: 15000, note: '打车', category_id: 2, tag_ids: [tags[1].id], days_ago: 0 },
     { amount: 29900, note: '买衣服', category_id: 3, tag_ids: [tags[2].id], days_ago: 1 },
-    { amount: 8800, note: '电影票', category_id: 4, tag_ids: [tags[3].id], days_ago: 2 },
+    { amount: 8800, note: '电影票', category_id: 5, tag_ids: [tags[3].id], days_ago: 2 },
     { amount: 5600, note: '外卖', category_id: 1, tag_ids: [tags[0].id], days_ago: 3 },
   ];
 
