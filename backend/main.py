@@ -30,6 +30,11 @@ app.add_exception_handler(AppException, app_exception_handler)
 
 app.include_router(api_router)
 
+
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok"}
+
 # 生产模式：服务前端构建产物（Docker 环境 static/ 目录存在）
 STATIC_DIR = "static"
 if os.path.isdir(STATIC_DIR):

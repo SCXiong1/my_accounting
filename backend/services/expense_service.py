@@ -229,21 +229,37 @@ async def update_expense(db: AsyncSession, uid: int, expense_id: int, req: Expen
         expense.note = req.note
 
     if req.tag_ids is not None:
+        req.tag_ids = list(set(req.tag_ids))
         await _validate_tags(db, uid, req.tag_ids)
 
+        # 软删除当前标签关联
         await db.execute(
             update(ExpenseTagIndex).where(
                 ExpenseTagIndex.expense_id == expense_id,
                 ExpenseTagIndex.deleted == 0,
             ).values(deleted=1, deleted_at=now)
         )
-        for tag_id in req.tag_ids:
-            db.add(ExpenseTagIndex(
-                uid=uid,
-                expense_id=expense_id,
-                tag_id=tag_id,
-                created_at=now,
-            ))
+        # 批量查询软删除记录，恢复或新建
+        if req.tag_ids:
+            existing_rows = await db.execute(
+                select(ExpenseTagIndex).where(
+                    ExpenseTagIndex.expense_id == expense_id,
+                    ExpenseTagIndex.tag_id.in_(req.tag_ids),
+                    ExpenseTagIndex.deleted == 1,
+                )
+            )
+            existing_map = {row.tag_id: row for row in existing_rows.scalars().all()}
+            for tag_id in req.tag_ids:
+                if tag_id in existing_map:
+                    existing_map[tag_id].deleted = 0
+                    existing_map[tag_id].deleted_at = 0
+                else:
+                    db.add(ExpenseTagIndex(
+                        uid=uid,
+                        expense_id=expense_id,
+                        tag_id=tag_id,
+                        created_at=now,
+                    ))
 
     expense.updated_at = now
     await db.commit()

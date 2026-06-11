@@ -137,7 +137,27 @@ function goAdd() {
   router.push('/expenses/add')
 }
 
+// 拖拽检测：左滑时抑制 click 导航
+const isDragging = ref(false)
+const pointerStart = ref({ x: 0, y: 0 })
+
+function onPointerDown(e: PointerEvent) {
+  pointerStart.value = { x: e.clientX, y: e.clientY }
+  isDragging.value = false
+}
+
+function onPointerMove(e: PointerEvent) {
+  if (Math.abs(e.clientX - pointerStart.value.x) > 10) {
+    isDragging.value = true
+  }
+}
+
+function onPointerUp() {
+  setTimeout(() => { isDragging.value = false }, 0)
+}
+
 function goEdit(id: number) {
+  if (isDragging.value) return
   router.push(`/expenses/${id}/edit`)
 }
 
@@ -217,7 +237,11 @@ async function handleDelete(id: number) {
           <div style="font-size: 48px;">📝</div>
           <div style="margin-top: 12px;">暂无支出记录</div>
         </div>
-        <div v-for="expense in store.items" :key="expense.id" @click="goEdit(expense.id)">
+        <div v-for="expense in store.items" :key="expense.id"
+          @pointerdown="onPointerDown"
+          @pointermove="onPointerMove"
+          @pointerup="onPointerUp"
+          @click="goEdit(expense.id)">
           <van-swipe-cell>
             <ExpenseCard :expense="expense" />
             <template #right>
