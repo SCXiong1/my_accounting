@@ -1,6 +1,6 @@
 # Issue 03: 记账表单移动端交互测试
 
-Status: ready-for-agent
+Status: done
 
 ## Parent
 
@@ -14,11 +14,11 @@ Status: ready-for-agent
 
 ## Acceptance criteria
 
-- [ ] 金额输入：`getByPlaceholder('0.00')` 输入 "12.50" → 断言字段显示该值
-- [ ] 分类 Picker：点击分类字段 → 断言 van-popup 可见 → 选"交通" → 断言字段显示"🚗 交通" → 断言 popup 关闭
-- [ ] 标签选择：点击标签字段 → 断言 popup 可见 → 勾选"午餐" → 点"确定" → 断言字段显示"午餐"
-- [ ] 日期 Picker：点击日期字段 → 断言 popup 可见 → 点"确认" → 断言 popup 关闭
-- [ ] 在 iPhone 14 和 Pixel 7 × Chromium 和 WebKit 共 4 个 project 全部通过
+- [x] 金额输入：`getByPlaceholder('0.00')` 输入 "12.50" → 断言字段显示该值
+- [x] 分类 Picker：点击分类字段 → 断言 van-popup 可见 → 选"交通" → 断言字段显示"🚗 交通" → 断言 popup 关闭
+- [x] 标签选择：点击标签字段 → 断言 popup 可见 → 勾选"餐饮" → 点"确定" → 断言字段显示"餐饮"
+- [x] 日期 Picker：点击日期字段 → 断言 popup 可见 → 点"确认" → 断言 popup 关闭
+- [x] 在 iPhone 14 和 Pixel 7 × Chromium 和 WebKit 共 4 个 project 全部通过
 
 ## Blocked by
 

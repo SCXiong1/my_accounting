@@ -44,3 +44,9 @@ Thumbs.db
 e2e/test-results/
 e2e/playwright-report/
 e2e/.auth/
+
+# Test results
+backend/test-results/
+
+# Core dumps
+core.*
