@@ -105,7 +105,7 @@ e2e/
   global-setup.ts       # Test data seeding + auth state
   fixtures/             # Custom test fixtures
   helpers/              # Gesture helpers, API client
-  tests/                # 7 spec files (one per user story)
+  tests/                # 7 spec files: S1 auth, S2 expense CRUD, S3 form interactions, S4 statistics, S5 pull-refresh & tabbar, S6 category manage, S7 tag manage
 ```
 
 ## Configuration

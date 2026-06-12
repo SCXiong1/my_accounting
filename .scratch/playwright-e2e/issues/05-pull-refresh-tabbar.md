@@ -1,6 +1,6 @@
 # Issue 05: 下拉刷新 + TabBar 导航测试
 
-Status: ready-for-agent
+Status: done
 
 ## Parent
 
@@ -14,11 +14,11 @@ Status: ready-for-agent
 
 ## Acceptance criteria
 
-- [ ] TabBar 可见性：首页断言 `.van-tabbar` 可见，`/expenses/add` 断言不可见
-- [ ] TabBar 导航：点击"记账"→ URL `/expenses`、"统计"→ `/statistics`、"我的"→ `/profile`、"首页"→ `/`
-- [ ] 首页下拉刷新：调用 pullDown → 等待 `.van-pull-refresh__loading` hidden → 断言统计卡片仍在
-- [ ] 列表下拉刷新：在 `/expenses` 调用 pullDown → 等待 loading 消失 → 断言列表内容仍在
-- [ ] 在 iPhone 14 和 Pixel 7 × Chromium 和 WebKit 共 4 个 project 全部通过
+- [x] TabBar 可见性：首页断言 `.van-tabbar` 可见，`/expenses/add` 断言不可见
+- [x] TabBar 导航：点击"记账"→ URL `/expenses`、"统计"→ `/statistics`、"我的"→ `/profile`、"首页"→ `/`
+- [x] 首页下拉刷新：调用 pullDown → 等待 `.van-pull-refresh__loading` hidden → 断言统计卡片仍在
+- [x] 列表下拉刷新：在 `/expenses` 调用 pullDown → 等待 loading 消失 → 断言列表内容仍在
+- [x] 在 iPhone 14 和 Pixel 7 × Chromium 和 WebKit 共 4 个 project 全部通过
 
 ## Blocked by
 

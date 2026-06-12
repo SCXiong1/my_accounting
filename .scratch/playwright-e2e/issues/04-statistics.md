@@ -1,6 +1,6 @@
 # Issue 04: 统计页测试
 
-Status: ready-for-agent
+Status: done
 
 ## Parent
 
@@ -14,10 +14,10 @@ Status: ready-for-agent
 
 ## Acceptance criteria
 
-- [ ] 周期切换：依次点击"本月""近3月""近6月""今年" → 每次断言 canvas 元素可见
-- [ ] 分类点击跳转：点击"餐饮"分类行 → 断言 URL 匹配 `/expenses?category_id=\d+`
-- [ ] 标签点击跳转：点击标签行 → 断言 URL 匹配 `/expenses?tag_id=\d+`
-- [ ] 在 iPhone 14 和 Pixel 7 × Chromium 和 WebKit 共 4 个 project 全部通过
+- [x] 周期切换：依次点击"本月""近3月""近6月""今年" → 每次断言 canvas 元素可见
+- [x] 分类点击跳转：点击"餐饮"分类行 → 断言 URL 匹配 `/expenses?category_id=\d+`
+- [x] 标签点击跳转：点击标签行 → 断言 URL 匹配 `/expenses?tag_id=\d+`
+- [x] 在 iPhone 14 和 Pixel 7 × Chromium 和 WebKit 共 4 个 project 全部通过
 
 ## Blocked by
 
