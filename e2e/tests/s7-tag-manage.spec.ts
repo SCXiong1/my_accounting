@@ -76,10 +76,9 @@ testAuth.describe('S7: 标签管理', () => {
     const tag = page.locator('.van-tag', { hasText: `待删_${uid}` });
     await tag.locator('.van-tag__close').click();
 
-    // 确认删除对话框（第二个 dialog）
+    // 确认删除对话框（用 .van-dialog:last-of-type 定位最新弹出的 dialog）
     await expect(page.getByText(/确定删除/)).toBeVisible();
-    // 用 getByRole 匹配可见的确认按钮
-    await page.getByRole('button', { name: '确认' }).click();
+    await page.locator('.van-dialog').last().locator('.van-dialog__confirm').click();
 
     // 验证消失
     await expect(page.locator('.van-tag', { hasText: `待删_${uid}` })).not.toBeVisible();

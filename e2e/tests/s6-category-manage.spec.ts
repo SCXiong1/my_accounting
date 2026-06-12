@@ -2,6 +2,17 @@ import { testAuth, expect } from '../fixtures/auth';
 
 const uid = Date.now();
 
+async function openSwipeCell(page: import('@playwright/test').Page, locator: import('@playwright/test').Locator) {
+  await locator.evaluate((el) => {
+    const comp = (el as any).__vueParentComponent;
+    if (!comp?.proxy?.open) {
+      throw new Error('openSwipeCell: Vue 3 internal API unavailable');
+    }
+    comp.proxy.open('right');
+  });
+  await page.waitForTimeout(300);
+}
+
 async function createCategory(page: import('@playwright/test').Page, name: string) {
   await page.getByRole('button', { name: '新增分类' }).click();
   const popup = page.getByRole('dialog');
@@ -41,13 +52,9 @@ testAuth.describe('S6: 分类管理', () => {
     await expect(page.getByText('分类管理')).toBeVisible();
     await createCategory(page, `待删_${uid}`);
 
-    // 找到该分类的 swipe-cell，通过 Vue 内部 API 打开
+    // 找到该分类的 swipe-cell 并打开
     const swipeCell = page.locator('.van-swipe-cell', { hasText: `待删_${uid}` });
-    await swipeCell.evaluate((el) => {
-      const comp = (el as any).__vueParentComponent;
-      comp?.proxy?.open('right');
-    });
-    await page.waitForTimeout(300);
+    await openSwipeCell(page, swipeCell);
 
     // 在该 swipe-cell 内找删除按钮
     await swipeCell.locator('.van-button--danger').click();
@@ -64,13 +71,9 @@ testAuth.describe('S6: 分类管理', () => {
     await page.goto('/categories');
     await expect(page.getByText('分类管理')).toBeVisible();
 
-    // 找到"餐饮"的 swipe-cell
+    // 找到"餐饮"的 swipe-cell 并打开
     const swipeCell = page.locator('.van-swipe-cell', { hasText: '餐饮' });
-    await swipeCell.evaluate((el) => {
-      const comp = (el as any).__vueParentComponent;
-      comp?.proxy?.open('right');
-    });
-    await page.waitForTimeout(300);
+    await openSwipeCell(page, swipeCell);
 
     // 在该 swipe-cell 内找删除按钮
     await swipeCell.locator('.van-button--danger').click();

@@ -44,8 +44,8 @@ testAuth.describe('S3: 记账表单移动端交互', () => {
     const popup = page.locator('.van-popup').filter({ hasText: '选择标签' });
     await popup.locator('.van-cell', { hasText: '餐饮' }).click();
 
-    // 点击确定
-    await page.getByRole('button', { name: '确定' }).click();
+    // 点击确定（限定在 popup 内）
+    await popup.getByRole('button', { name: '确定' }).click();
 
     // 字段显示"餐饮"
     await expect(page.locator('.van-field', { hasText: /标签/ }).locator('input')).toHaveValue(/餐饮/);
