@@ -162,7 +162,6 @@ testAuth.describe('S2: 账单 CRUD', () => {
     // 左滑该账单卡片
     const card = page.getByTestId('expense-card').filter({ hasText: note });
     await swipeCellLeft(page, card);
-    await page.waitForTimeout(300);
 
     // 点击删除按钮（左滑后露出的按钮，限定在该卡片的 swipe-cell 内）
     const deleteBtn = page.getByTestId('expense-list-swipe-cell').filter({ has: card }).getByTestId('expense-list-delete-btn');

@@ -27,7 +27,8 @@ export async function swipeCellLeft(page: Page, target: Locator) {
  * 下拉刷新
  */
 export async function pullDown(page: Page) {
-  const viewport = page.viewportSize()!;
+  const viewport = page.viewportSize();
+  if (!viewport) throw new Error('pullDown: page viewport not configured');
   const x = viewport.width / 2;
   await page.mouse.move(x, viewport.height * 0.3);
   await page.mouse.down();
@@ -40,12 +41,9 @@ export async function pullDown(page: Page) {
  * Picker 选项格式为 "{icon} {name}"，如 "🍽️ 餐饮"
  * 使用 substring 匹配，支持传入纯名称如 "餐饮"
  */
-export async function selectPickerOption(page: Page, optionText: string, pickerTestId?: string) {
-  const column = pickerTestId
-    ? page.getByTestId(pickerTestId)
-    : page.locator('.van-picker-column');
-  await column.getByText(optionText).first().click();
-  const confirmBtn = page.getByRole('button', { name: '确认' });
+export async function selectPickerOption(page: Page, optionText: string, pickerTestId = 'category-picker__column', popupTestId = 'category-picker__popup') {
+  await page.getByTestId(pickerTestId).getByText(optionText).first().click();
+  const confirmBtn = page.getByTestId(popupTestId).getByRole('button', { name: '确认' });
   if (await confirmBtn.isVisible()) {
     await confirmBtn.click();
   }

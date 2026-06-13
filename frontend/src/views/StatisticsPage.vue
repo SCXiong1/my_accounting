@@ -166,7 +166,7 @@ onUnmounted(() => {
     <div v-if="!busy && store.categoryStats.length === 0" class="empty-placeholder" style="padding:30px 0;">
       <div style="font-size:13px;color:#c8c9cc;">暂无数据</div>
     </div>
-    <ChartPie v-else :data="catPieData" data-testid="stats-chart-pie" @legend-change="s => catLegendVisible = s" />
+    <ChartPie v-else :data="catPieData" @legend-change="s => catLegendVisible = s" />
 
     <div v-if="filteredCategoryStats.length > 0" style="padding:0 16px 12px;">
       <div
@@ -200,7 +200,7 @@ onUnmounted(() => {
     <div v-if="!busy && store.tagStats.length === 0" class="empty-placeholder" style="padding:30px 0;">
       <div style="font-size:13px;color:#c8c9cc;">暂无标签数据</div>
     </div>
-    <ChartPie v-else :data="tagPieData" @legend-change="s => tagLegendVisible = s" />
+    <ChartPie v-else :data="tagPieData" data-testid="stats-tag-pie" @legend-change="s => tagLegendVisible = s" />
 
     <div v-if="filteredTagStats.length > 0" style="padding:0 16px 20px;">
       <div

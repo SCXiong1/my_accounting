@@ -104,19 +104,22 @@ async function handleDelete(tag: Tag) {
       :show-confirm-button="false"
       show-cancel-button
     >
-      <div style="padding: 12px 16px;">
-        <van-field
-          v-model="tagName"
-          label="名称"
-          placeholder="标签名称"
-          :rules="[{ required: true }]"
-          data-testid="tag-manage-name"
-        />
-      </div>
+      <van-form @submit="handleSubmit">
+        <div style="padding: 12px 16px;">
+          <van-field
+            v-model="tagName"
+            label="名称"
+            placeholder="标签名称"
+            :rules="[{ required: true }]"
+            data-testid="tag-manage-name"
+          />
+        </div>
+      </van-form>
       <template #footer>
         <div class="van-dialog__footer">
           <van-button
             class="van-dialog__cancel van-dialog__footer-cancel"
+            native-type="button"
             @click="dialogVisible = false"
           >
             取消
@@ -124,6 +127,7 @@ async function handleDelete(tag: Tag) {
           <van-button
             class="van-dialog__confirm van-dialog__footer-confirm"
             type="primary"
+            native-type="submit"
             :loading="submitting"
             data-testid="tag-manage-confirm"
             @click="handleSubmit"
