@@ -1,25 +1,14 @@
 import { testAuth, expect } from '../fixtures/auth';
+import { swipeCellLeft } from '../helpers/gestures';
 
 const uid = Date.now();
-
-async function openSwipeCell(page: import('@playwright/test').Page, locator: import('@playwright/test').Locator) {
-  await locator.evaluate((el) => {
-    const comp = (el as any).__vueParentComponent;
-    if (!comp?.proxy?.open) {
-      throw new Error('openSwipeCell: Vue 3 internal API unavailable');
-    }
-    comp.proxy.open('right');
-  });
-  await page.waitForTimeout(300);
-}
 
 async function createCategory(page: import('@playwright/test').Page, name: string) {
   await page.getByRole('button', { name: '新增分类' }).click();
   const popup = page.getByRole('dialog');
   await page.getByPlaceholder('分类名称').fill(name);
-  await popup.getByText('🐱').click();
-  const colorCircles = popup.locator('span[style*="border-radius: 50%"]');
-  await colorCircles.first().click();
+  await popup.getByTestId('category-manage-icon').filter({ hasText: '🐱' }).click();
+  await popup.getByTestId('category-manage-color').first().click();
   await page.getByRole('button', { name: '保存' }).click();
   await expect(page.getByText(name)).toBeVisible();
 }
@@ -37,7 +26,7 @@ testAuth.describe('S6: 分类管理', () => {
     await createCategory(page, `宠物A_${uid}`);
 
     // 点击进入编辑
-    await page.locator('.van-cell').filter({ hasText: `宠物A_${uid}` }).click();
+    await page.getByTestId('category-manage-swipe-cell').filter({ hasText: `宠物A_${uid}` }).click();
 
     const nameInput = page.getByPlaceholder('分类名称');
     await nameInput.clear();
@@ -53,18 +42,18 @@ testAuth.describe('S6: 分类管理', () => {
     await createCategory(page, `待删_${uid}`);
 
     // 找到该分类的 swipe-cell 并打开
-    const swipeCell = page.locator('.van-swipe-cell', { hasText: `待删_${uid}` });
-    await openSwipeCell(page, swipeCell);
+    const swipeCell = page.getByTestId('category-manage-swipe-cell').filter({ hasText: `待删_${uid}` });
+    await swipeCellLeft(page, swipeCell);
 
     // 在该 swipe-cell 内找删除按钮
-    await swipeCell.locator('.van-button--danger').click();
+    await swipeCell.getByTestId('category-manage-delete-btn').click();
 
     // 确认删除
     await expect(page.getByText(/确定删除/)).toBeVisible();
     await page.getByRole('button', { name: '确认' }).click();
 
-    // 验证消失（用 .van-cell 精确匹配列表项，避免匹配对话框消息）
-    await expect(page.locator('.van-cell', { hasText: `待删_${uid}` })).not.toBeVisible();
+    // 验证消失
+    await expect(page.getByTestId('category-manage-swipe-cell').filter({ hasText: `待删_${uid}` })).not.toBeVisible();
   });
 
   testAuth('不可删验证：左滑餐饮（有账单）→ 删除 → 错误提示', async ({ page }) => {
@@ -72,11 +61,11 @@ testAuth.describe('S6: 分类管理', () => {
     await expect(page.getByText('分类管理')).toBeVisible();
 
     // 找到"餐饮"的 swipe-cell 并打开
-    const swipeCell = page.locator('.van-swipe-cell', { hasText: '餐饮' });
-    await openSwipeCell(page, swipeCell);
+    const swipeCell = page.getByTestId('category-manage-swipe-cell').filter({ hasText: '餐饮' });
+    await swipeCellLeft(page, swipeCell);
 
     // 在该 swipe-cell 内找删除按钮
-    await swipeCell.locator('.van-button--danger').click();
+    await swipeCell.getByTestId('category-manage-delete-btn').click();
 
     // 断言错误提示（前端 guard）
     await expect(page.getByText('该分类下有支出记录，无法删除')).toBeVisible();

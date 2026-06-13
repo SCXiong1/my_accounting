@@ -89,12 +89,12 @@ async function handleLogout() {
     <van-cell-group inset>
       <van-cell title="修改昵称" is-link @click="showNicknameEdit = true" />
       <van-cell title="修改密码" is-link @click="showPasswordEdit = true" />
-      <van-cell title="标签管理" is-link to="/tags" />
+      <van-cell title="标签管理" is-link to="/tags" data-testid="profile-nav-tags" />
       <van-cell title="回收站" is-link to="/trash" />
     </van-cell-group>
 
     <div style="padding: 32px 16px;">
-      <van-button round block type="danger" @click="handleLogout">退出登录</van-button>
+      <van-button round block type="danger" data-testid="profile-logout" @click="handleLogout">退出登录</van-button>
     </div>
 
     <!-- 修改昵称 -->

@@ -76,6 +76,7 @@ async function handleDelete(tag: Tag) {
         :key="tag.id"
         size="large"
         closeable
+        data-testid="tag-manage-tag"
         @close="handleDelete(tag)"
         @click="openEdit(tag)"
         type="primary"
@@ -92,25 +93,49 @@ async function handleDelete(tag: Tag) {
     </div>
 
     <div style="padding: 16px;">
-      <van-button round block type="primary" @click="openCreate">新增标签</van-button>
+      <van-button round block type="primary" data-testid="tag-manage-add-btn" @click="openCreate">新增标签</van-button>
     </div>
 
     <!-- 新增/编辑弹窗 -->
     <van-dialog
       v-model:show="dialogVisible"
       :title="editing ? '编辑标签' : '新增标签'"
+      data-testid="tag-manage-dialog"
+      :show-confirm-button="false"
       show-cancel-button
-      @confirm="handleSubmit"
-      :confirm-button-disabled="submitting"
     >
-      <div style="padding: 12px 16px;">
-        <van-field
-          v-model="tagName"
-          label="名称"
-          placeholder="标签名称"
-          :rules="[{ required: true }]"
-        />
-      </div>
+      <van-form @submit="handleSubmit">
+        <div style="padding: 12px 16px;">
+          <van-field
+            v-model="tagName"
+            label="名称"
+            placeholder="标签名称"
+            :rules="[{ required: true }]"
+            data-testid="tag-manage-name"
+          />
+        </div>
+      </van-form>
+      <template #footer>
+        <div class="van-dialog__footer">
+          <van-button
+            class="van-dialog__cancel van-dialog__footer-cancel"
+            native-type="button"
+            @click="dialogVisible = false"
+          >
+            取消
+          </van-button>
+          <van-button
+            class="van-dialog__confirm van-dialog__footer-confirm"
+            type="primary"
+            native-type="submit"
+            :loading="submitting"
+            data-testid="tag-manage-confirm"
+            @click="handleSubmit"
+          >
+            确认
+          </van-button>
+        </div>
+      </template>
     </van-dialog>
   </div>
 </template>

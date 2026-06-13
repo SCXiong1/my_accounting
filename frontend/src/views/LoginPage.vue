@@ -70,6 +70,7 @@ setTimeout(() => showError(getErrorMessage(e, '重置失败')), 300)
           placeholder="请输入用户名"
           :rules="[{ required: true, message: '请输入用户名' }]"
           clearable
+          data-testid="login-username"
         />
         <van-field
           v-model="password"
@@ -79,6 +80,7 @@ setTimeout(() => showError(getErrorMessage(e, '重置失败')), 300)
           placeholder="请输入密码"
           :rules="[{ required: true, message: '请输入密码' }]"
           clearable
+          data-testid="login-password"
         />
         <div style="margin: 24px 16px;">
           <van-button
@@ -88,6 +90,7 @@ setTimeout(() => showError(getErrorMessage(e, '重置失败')), 300)
             native-type="submit"
             :loading="loading"
             loading-text="登录中..."
+            data-testid="login-submit"
           >
             登录
           </van-button>

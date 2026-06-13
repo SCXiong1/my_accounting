@@ -5,31 +5,31 @@ testAuth.describe('S5: 下拉刷新 + TabBar 导航', () => {
   testAuth('TabBar 可见性：首页可见，新增页隐藏', async ({ page }) => {
     // 首页 TabBar 可见
     await page.goto('/');
-    await expect(page.locator('.van-tabbar')).toBeVisible();
+    await expect(page.getByTestId('app-tabbar')).toBeVisible();
 
     // 新增页 TabBar 隐藏
     await page.goto('/expenses/add');
-    await expect(page.locator('.van-tabbar')).not.toBeVisible();
+    await expect(page.getByTestId('app-tabbar')).not.toBeVisible();
   });
 
   testAuth('TabBar 导航：点击各 tab 验证 URL', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('.van-tabbar')).toBeVisible();
+    await expect(page.getByTestId('app-tabbar')).toBeVisible();
 
     // 记账 → /expenses
-    await page.locator('.van-tabbar').getByText('记账').click();
+    await page.getByRole('tab', { name: '记账' }).click();
     await expect(page).toHaveURL(/\/expenses/);
 
     // 统计 → /statistics
-    await page.locator('.van-tabbar').getByText('统计').click();
+    await page.getByRole('tab', { name: '统计' }).click();
     await expect(page).toHaveURL(/\/statistics/);
 
     // 我的 → /profile
-    await page.locator('.van-tabbar').getByText('我的').click();
+    await page.getByRole('tab', { name: '我的' }).click();
     await expect(page).toHaveURL(/\/profile/);
 
     // 首页 → /
-    await page.locator('.van-tabbar').getByText('首页').click();
+    await page.getByRole('tab', { name: '首页' }).click();
     await expect(page).toHaveURL(/\/$/);
   });
 

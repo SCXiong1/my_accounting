@@ -42,7 +42,7 @@ test.describe('S1: 认证流程', () => {
 
     // 退出登录
     await page.getByRole('tab', { name: '我的' }).click();
-    await page.getByText('退出登录').click();
+    await page.getByTestId('profile-logout').click();
     await page.getByRole('button', { name: '确认' }).click();
     await page.waitForURL('/login');
 
@@ -79,7 +79,7 @@ test.describe('S1: 认证流程', () => {
     await page.getByRole('tab', { name: '我的' }).click();
 
     // 点击退出登录
-    await page.getByText('退出登录').click();
+    await page.getByTestId('profile-logout').click();
 
     // 确认对话框
     await page.getByRole('button', { name: '确认' }).click();

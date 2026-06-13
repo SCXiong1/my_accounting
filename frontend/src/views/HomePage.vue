@@ -53,7 +53,7 @@ function goAdd() {
       <van-grid :column-num="2" style="margin: 8px 4px;">
         <van-grid-item>
           <template #default>
-            <div class="stat-card" style="margin: 0; width: 100%;">
+            <div class="stat-card" data-testid="home-stat-today" style="margin: 0; width: 100%;">
               <div class="stat-card__amount">{{ formatAmount(statsStore.overview.today) }}</div>
               <div class="stat-card__label">今日支出</div>
             </div>
@@ -61,7 +61,7 @@ function goAdd() {
         </van-grid-item>
         <van-grid-item>
           <template #default>
-            <div class="stat-card" style="margin: 0; width: 100%;">
+            <div class="stat-card" data-testid="home-stat-week" style="margin: 0; width: 100%;">
               <div class="stat-card__amount">{{ formatAmount(statsStore.overview.this_week) }}</div>
               <div class="stat-card__label">本周支出</div>
             </div>
@@ -69,7 +69,7 @@ function goAdd() {
         </van-grid-item>
         <van-grid-item>
           <template #default>
-            <div class="stat-card" style="margin: 0; width: 100%;">
+            <div class="stat-card" data-testid="home-stat-month" style="margin: 0; width: 100%;">
               <div class="stat-card__amount">{{ formatAmount(statsStore.overview.this_month) }}</div>
               <div class="stat-card__label">本月支出</div>
             </div>
@@ -77,7 +77,7 @@ function goAdd() {
         </van-grid-item>
         <van-grid-item>
           <template #default>
-            <div class="stat-card" style="margin: 0; width: 100%;">
+            <div class="stat-card" data-testid="home-stat-year" style="margin: 0; width: 100%;">
               <div class="stat-card__amount">{{ formatAmount(statsStore.overview.this_year) }}</div>
               <div class="stat-card__label">今年支出</div>
             </div>

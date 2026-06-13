@@ -25,7 +25,7 @@ testAuth.describe('S2: 账单 CRUD', () => {
 
     // 选择标签：餐饮
     await page.getByRole('button', { name: /标签/ }).click();
-    await page.locator('.van-popup .van-checkbox-group .van-cell', { hasText: '餐饮' }).click();
+    await page.getByTestId('tag-checkbox__popup').getByTestId('tag-checkbox__cell').filter({ hasText: '餐饮' }).click();
     await page.getByRole('button', { name: '确定' }).click();
 
     // 填写备注
@@ -38,9 +38,9 @@ testAuth.describe('S2: 账单 CRUD', () => {
     ]);
 
     // 验证新账单出现在列表中
-    const card = page.locator('.expense-card', { hasText: note });
+    const card = page.getByTestId('expense-card').filter({ hasText: note });
     await expect(card).toBeVisible();
-    await expect(card.locator('.expense-card__amount')).toContainText('25.50');
+    await expect(card.getByTestId('expense-card__amount')).toContainText('25.50');
   });
 
   testAuth('编辑分类：改餐饮 → 交通', async ({ page, request }) => {
@@ -71,8 +71,8 @@ testAuth.describe('S2: 账单 CRUD', () => {
     await saveBtn.click();
     await page.waitForURL('**/expenses', { timeout: 15000 });
 
-    const card = page.locator('.expense-card', { hasText: note });
-    await expect(card.locator('.expense-card__category')).toContainText('交通');
+    const card = page.getByTestId('expense-card').filter({ hasText: note });
+    await expect(card.getByTestId('expense-card__category')).toContainText('交通');
   });
 
   testAuth('编辑标签：切换标签 餐饮 → 交通', async ({ page, request }) => {
@@ -97,16 +97,16 @@ testAuth.describe('S2: 账单 CRUD', () => {
 
     await page.getByRole('button', { name: /标签/ }).click();
     await expect(page.getByText('选择标签')).toBeVisible();
-    const popup = page.locator('.van-popup .van-checkbox-group');
-    await popup.locator('.van-cell', { hasText: '餐饮' }).click();
-    await popup.locator('.van-cell', { hasText: '交通' }).click();
+    const popup = page.getByTestId('tag-checkbox__popup').getByTestId('tag-checkbox__group');
+    await popup.getByTestId('tag-checkbox__cell').filter({ hasText: '餐饮' }).click();
+    await popup.getByTestId('tag-checkbox__cell').filter({ hasText: '交通' }).click();
     await page.getByRole('button', { name: '确定' }).click();
 
     await page.getByRole('button', { name: '保存修改' }).click();
     await page.waitForURL('**/expenses', { timeout: 15000 });
 
-    const card = page.locator('.expense-card', { hasText: note });
-    await expect(card.locator('.expense-card__category')).toContainText('餐饮 · 交通');
+    const card = page.getByTestId('expense-card').filter({ hasText: note });
+    await expect(card.getByTestId('expense-card__category')).toContainText('餐饮 · 交通');
   });
 
   testAuth('编辑备注：改备注为"测试备注"', async ({ page, request }) => {
@@ -136,9 +136,9 @@ testAuth.describe('S2: 账单 CRUD', () => {
     await page.getByRole('button', { name: '保存修改' }).click();
     await page.waitForURL('**/expenses', { timeout: 15000 });
 
-    const card = page.locator('.expense-card', { hasText: `已修改_${uid}` });
+    const card = page.getByTestId('expense-card').filter({ hasText: `已修改_${uid}` });
     await expect(card).toBeVisible();
-    await expect(card.locator('.expense-card__amount')).toContainText('30.00');
+    await expect(card.getByTestId('expense-card__amount')).toContainText('30.00');
   });
 
   testAuth('删除账单：左滑 → 删除 → 确认 → 验证消失', async ({ page, request }) => {
@@ -160,12 +160,11 @@ testAuth.describe('S2: 账单 CRUD', () => {
     await expect(page.getByText(note)).toBeVisible();
 
     // 左滑该账单卡片
-    const card = page.locator('.expense-card', { hasText: note });
+    const card = page.getByTestId('expense-card').filter({ hasText: note });
     await swipeCellLeft(page, card);
-    await page.waitForTimeout(300);
 
-    // 点击删除按钮（左滑后露出的按钮）
-    const deleteBtn = page.locator('.van-button--danger').filter({ hasText: '删除' }).first();
+    // 点击删除按钮（左滑后露出的按钮，限定在该卡片的 swipe-cell 内）
+    const deleteBtn = page.getByTestId('expense-list-swipe-cell').filter({ has: card }).getByTestId('expense-list-delete-btn');
     await deleteBtn.click();
 
     // 确认删除对话框
@@ -219,7 +218,7 @@ testAuth.describe('S2: 账单 CRUD', () => {
     await page.getByRole('button', { name: '保存修改' }).click();
     await page.waitForURL('**/expenses', { timeout: 15000 });
 
-    const card = page.locator('.expense-card__note', { hasText: longNote.substring(0, 20) });
+    const card = page.getByTestId('expense-card__note').filter({ hasText: longNote.substring(0, 20) });
     await expect(card).toBeVisible();
   });
 
@@ -245,14 +244,14 @@ testAuth.describe('S2: 账单 CRUD', () => {
 
     await page.getByRole('button', { name: /标签/ }).click();
     await expect(page.getByText('选择标签')).toBeVisible();
-    await page.locator('.van-popup .van-checkbox-group .van-cell', { hasText: '交通' }).click();
+    await page.getByTestId('tag-checkbox__popup').getByTestId('tag-checkbox__cell').filter({ hasText: '交通' }).click();
     await page.getByRole('button', { name: '确定' }).click();
 
     await page.getByRole('button', { name: '保存修改' }).click();
     await page.waitForURL('**/expenses', { timeout: 15000 });
 
-    const card = page.locator('.expense-card', { hasText: note });
-    const catText = await card.locator('.expense-card__category').textContent();
+    const card = page.getByTestId('expense-card').filter({ hasText: note });
+    const catText = await card.getByTestId('expense-card__category').textContent();
     expect(catText).toContain('餐饮');
     expect(catText).toContain('交通');
   });
@@ -279,15 +278,15 @@ testAuth.describe('S2: 账单 CRUD', () => {
 
     await page.getByRole('button', { name: /标签/ }).click();
     await expect(page.getByText('选择标签')).toBeVisible();
-    await page.locator('.van-popup .van-checkbox-group .van-cell', { hasText: '餐饮' }).click();
+    await page.getByTestId('tag-checkbox__popup').getByTestId('tag-checkbox__cell').filter({ hasText: '餐饮' }).click();
     await page.getByRole('button', { name: '确定' }).click();
 
     await page.getByRole('button', { name: '保存修改' }).click();
     await page.waitForURL('**/expenses', { timeout: 15000 });
 
-    const card = page.locator('.expense-card', { hasText: note });
+    const card = page.getByTestId('expense-card').filter({ hasText: note });
     await expect(card).toBeVisible();
     // 验证标签已移除：分类文本不含 " · " 标签分隔符
-    await expect(card.locator('.expense-card__category')).not.toContainText('·');
+    await expect(card.getByTestId('expense-card__category')).not.toContainText('·');
   });
 });

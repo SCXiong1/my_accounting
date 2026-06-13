@@ -113,7 +113,7 @@ async function handleSubmit() {
 
 <template>
   <div class="page-container">
-    <van-nav-bar :title="isEdit ? '编辑支出' : '新增支出'" left-text="取消" left-arrow @click-left="$router.back()" />
+    <van-nav-bar :title="isEdit ? '编辑支出' : '新增支出'" left-text="取消" left-arrow data-testid="expense-form-nav" @click-left="$router.back()" />
 
     <van-loading v-if="loading" style="padding: 48px; text-align: center;" />
 
@@ -129,6 +129,7 @@ async function handleSubmit() {
         is-link
         readonly
         label="日期"
+        data-testid="expense-form-date"
         @click="showDatetimePicker = true"
       />
 
@@ -142,6 +143,7 @@ async function handleSubmit() {
         type="textarea"
         maxlength="255"
         show-word-limit
+        data-testid="expense-form-note"
       />
 
       <div style="margin: 24px 16px;">
@@ -151,6 +153,7 @@ async function handleSubmit() {
           type="primary"
           :loading="submitting"
           loading-text="保存中..."
+          data-testid="expense-form-submit"
           @click="handleSubmit"
         >
           {{ isEdit ? '保存修改' : '记录支出' }}
@@ -159,7 +162,7 @@ async function handleSubmit() {
     </div>
 
     <!-- 日期选择器 -->
-    <van-popup v-model:show="showDatetimePicker" position="bottom" round>
+    <van-popup v-model:show="showDatetimePicker" position="bottom" round data-testid="expense-form-date-popup">
       <van-date-picker
         title="选择日期"
 :model-value="datePickerValue()"

@@ -21,7 +21,7 @@ watch(() => auth.token, (val) => {
 <template>
   <NotifyBar />
   <router-view />
-  <van-tabbar v-if="showTabbar" route placeholder>
+  <van-tabbar v-if="showTabbar" route placeholder data-testid="app-tabbar">
     <van-tabbar-item name="home" icon="home-o" to="/">首页</van-tabbar-item>
     <van-tabbar-item name="expenses" icon="balance-o" to="/expenses">记账</van-tabbar-item>
     <van-tabbar-item name="statistics" icon="chart-trending-o" to="/statistics">统计</van-tabbar-item>
