@@ -10,6 +10,9 @@
   /* ── Functional colors ── */
   --color-primary: #E8915A;
   --color-primary-light: #FCEEE4;
+  --color-accent: #2D6A4F;
+  --color-accent-light: #E8F5EE;
+  --color-accent-dark: #1B4332;
   --color-success: #7DB88B;
   --color-danger: #D96B6B;
   --color-info: #7BA7C9;
@@ -21,6 +24,9 @@
   --space-lg: 16px;
   --space-xl: 24px;
   --space-2xl: 32px;
+  --space-3xl: 48px;
+  --space-4xl: 64px;
+  --space-section: 20px;
 
   /* ── Radius ── */
   --radius-sm: 8px;
@@ -35,4 +41,6 @@
 
   /* ── Font ── */
   --font-family: -apple-system, "SF Pro Text", "PingFang SC", "Helvetica Neue", "Noto Sans SC", sans-serif;
+  --font-size-amount: 26px;
+  --font-size-amount-sm: 18px;
 }

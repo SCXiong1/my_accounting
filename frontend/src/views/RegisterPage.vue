@@ -47,7 +47,7 @@ async function handleRegister() {
         <van-field v-model="password" type="password" label="密码" placeholder="至少 6 位" :rules="[{ required: true, message: '请输入密码' }]" clearable data-testid="register-password" />
         <van-field v-model="password2" type="password" label="确认密码" placeholder="再次输入密码" :rules="[{ required: true, message: '请确认密码' }]" clearable data-testid="register-password-confirm" />
         <div class="register-actions">
-          <van-button round block type="primary" native-type="submit" :loading="loading" loading-text="注册中..." data-testid="register-submit">注册</van-button>
+          <van-button round block type="primary" native-type="submit" :loading="loading" loading-text="注册中..." data-testid="register-submit" class="van-button--accent">注册</van-button>
         </div>
       </van-form>
       <div class="register-link">
@@ -68,11 +68,11 @@ async function handleRegister() {
 
 .register-link {
   text-align: center;
-  margin-top: var(--space-sm);
+  margin-top: var(--space-lg);
 }
 
 .register-link__a {
-  color: var(--color-primary);
+  color: var(--color-accent);
   font-size: 14px;
 }
 </style>

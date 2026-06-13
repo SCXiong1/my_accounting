@@ -281,7 +281,7 @@ async function handleDelete(id: number) {
 
 <style scoped>
 .expense-search-bar {
-  padding: var(--space-sm) var(--space-md);
+  padding: var(--space-md) var(--space-lg);
   background: var(--color-surface);
 }
 
@@ -305,7 +305,7 @@ async function handleDelete(id: number) {
 }
 
 .expense-divider {
-  margin: 0;
+  margin: var(--space-xs) 0;
 }
 
 .expense-fab {

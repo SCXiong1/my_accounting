@@ -19,7 +19,7 @@ const {
   selectPeriod, openCustom, onPickerConfirm, onCancelCustom,
 } = usePeriodFilter()
 
-const TAG_PALETTE = ['#E8915A', '#7DB88B', '#7BA7C9', '#D96B6B', '#C49BD9', '#E8C76B', '#6BC5C5', '#B8927A']
+const TAG_PALETTE = ['#E8915A', '#2D6A4F', '#7BA7C9', '#D96B6B', '#C49BD9', '#E8C76B', '#6BC5C5', '#B8927A']
 
 const selectedCategoryId = ref<number | null>(null)
 const busy = ref(false)
@@ -245,26 +245,26 @@ onUnmounted(() => {
 
 <style scoped>
 .stats-overview-grid {
-  margin: var(--space-sm) var(--space-xs);
+  margin: var(--space-md) var(--space-sm);
 }
 
 .stats-overview-card {
   margin: 0;
   width: 100%;
-  padding: 10px var(--space-xs);
+  padding: var(--space-md) var(--space-sm);
 }
 
 .stats-overview-amount {
-  font-size: 15px;
+  font-size: var(--font-size-amount-sm);
 }
 
 .stats-detail-link {
   font-size: 13px;
-  color: var(--color-primary);
+  color: var(--color-accent);
 }
 
 .stats-empty {
-  padding: 30px 0;
+  padding: var(--space-3xl) 0;
 }
 
 .stats-empty-text {
@@ -283,13 +283,13 @@ onUnmounted(() => {
 .stats-detail-row {
   display: flex;
   align-items: center;
-  padding: var(--space-xs) 0;
+  padding: var(--space-sm) 0;
   font-size: 13px;
 }
 
 .stats-detail-name {
   flex: 1;
-  margin-left: 6px;
+  margin-left: var(--space-sm);
   color: var(--color-text-primary);
 }
 
@@ -299,19 +299,20 @@ onUnmounted(() => {
 }
 
 .stats-detail-amount {
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .stats-tag-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  margin-right: 6px;
+  margin-right: var(--space-sm);
   flex-shrink: 0;
 }
 
 .stats-bottom-spacer {
-  height: 20px;
+  height: var(--space-section);
 }
 
 .custom-popup {

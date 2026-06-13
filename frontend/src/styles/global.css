@@ -17,7 +17,7 @@
   --van-nav-bar-text-color: #fff;
   --van-nav-bar-icon-color: #fff;
   --van-tabbar-background: var(--color-surface);
-  --van-tabbar-item-active-color: var(--color-primary);
+  --van-tabbar-item-active-color: var(--color-accent);
   --van-button-primary-background: var(--color-primary);
   --van-button-primary-border-color: var(--color-primary);
   --van-switch-on-background: var(--color-primary);
@@ -43,28 +43,31 @@ html, body, #app {
 
 .stat-card {
   text-align: center;
-  padding: var(--space-lg) var(--space-md);
+  padding: var(--space-xl) var(--space-lg);
   background: var(--color-surface);
   border-radius: var(--radius-sm);
   margin: var(--space-sm);
 }
 
 .stat-card__amount {
-  font-size: 20px;
+  font-size: var(--font-size-amount);
   font-weight: bold;
   color: var(--color-text-primary);
+  letter-spacing: -0.02em;
 }
 
 .stat-card__label {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--color-text-secondary);
   margin-top: var(--space-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .expense-card {
   display: flex;
   align-items: center;
-  padding: var(--space-md) var(--space-lg);
+  padding: var(--space-lg) var(--space-lg);
 }
 
 .expense-card__icon {
@@ -93,7 +96,7 @@ html, body, #app {
 .expense-card__note {
   font-size: 12px;
   color: var(--color-text-secondary);
-  margin-top: 2px;
+  margin-top: 3px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -102,27 +105,28 @@ html, body, #app {
 .expense-card__time {
   font-size: 11px;
   color: var(--color-text-placeholder);
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
 .expense-card__amount {
-  font-size: 16px;
-  font-weight: bold;
+  font-size: 18px;
+  font-weight: 600;
   color: var(--color-text-primary);
   text-align: right;
   flex-shrink: 0;
+  letter-spacing: -0.01em;
 }
 
 .empty-placeholder {
   text-align: center;
-  padding: 60px 0;
+  padding: var(--space-4xl) 0;
   color: var(--color-text-secondary);
 }
 
 .filter-bar {
   display: flex;
   gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
+  padding: var(--space-md) var(--space-lg);
   background: var(--color-surface);
   overflow-x: auto;
   white-space: nowrap;
@@ -134,6 +138,13 @@ html, body, #app {
 
 .chart-box {
   width: 100%;
-  padding: 0 var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
   box-sizing: border-box;
+}
+
+.van-button--accent {
+  --van-button-background: var(--color-accent) !important;
+  --van-button-border-color: var(--color-accent) !important;
+  --van-button-primary-background: var(--color-accent) !important;
+  --van-button-primary-border-color: var(--color-accent) !important;
 }

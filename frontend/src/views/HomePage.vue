@@ -87,7 +87,7 @@ function goAdd() {
 
       <!-- 快速记账 -->
       <div class="home-add-btn">
-        <van-button round block type="primary" icon="plus" @click="goAdd">
+        <van-button round block type="primary" icon="plus" class="van-button--accent" @click="goAdd">
           记一笔
         </van-button>
       </div>
@@ -106,7 +106,7 @@ function goAdd() {
 
 <style scoped>
 .home-grid {
-  margin: var(--space-sm) var(--space-xs);
+  margin: var(--space-md) var(--space-sm);
 }
 
 .home-stat-card {
@@ -115,10 +115,10 @@ function goAdd() {
 }
 
 .home-add-btn {
-  padding: var(--space-md) var(--space-lg);
+  padding: var(--space-lg) var(--space-lg);
 }
 
 .home-recent {
-  margin-top: var(--space-sm);
+  margin-top: var(--space-section);
 }
 </style>

@@ -91,6 +91,7 @@ setTimeout(() => showError(getErrorMessage(e, '重置失败')), 300)
             :loading="loading"
             loading-text="登录中..."
             data-testid="login-submit"
+            class="van-button--accent"
           >
             登录
           </van-button>
@@ -138,13 +139,13 @@ setTimeout(() => showError(getErrorMessage(e, '重置失败')), 300)
 
 .login-links {
   text-align: center;
-  margin-top: var(--space-sm);
+  margin-top: var(--space-lg);
   display: flex;
   justify-content: space-around;
 }
 
 .login-link {
-  color: var(--color-primary);
+  color: var(--color-accent);
   font-size: 14px;
   cursor: pointer;
 }

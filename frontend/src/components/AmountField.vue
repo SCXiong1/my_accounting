@@ -31,7 +31,7 @@ const yuanText = computed({
 
 <style scoped>
 .amount-symbol {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: bold;
 }
 </style>
