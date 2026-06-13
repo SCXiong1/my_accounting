@@ -1,15 +1,38 @@
 :root {
-  --van-primary-color: #1989fa;
-  --van-nav-bar-background: #1989fa;
+  /* ── Vant theme overrides (warm & soft) ── */
+  --van-primary-color: var(--color-primary);
+  --van-success-color: var(--color-success);
+  --van-danger-color: var(--color-danger);
+  --van-text-color: var(--color-text-primary);
+  --van-text-color-2: var(--color-text-secondary);
+  --van-text-color-3: var(--color-text-placeholder);
+  --van-active-color: var(--color-primary-light);
+  --van-background: var(--color-bg);
+  --van-background-2: var(--color-surface);
+  --van-border-color: var(--color-border);
+  --van-border-radius: var(--radius-sm);
+  --van-border-radius-sm: var(--radius-sm);
+  --van-border-radius-lg: var(--radius-lg);
+  --van-nav-bar-background: var(--color-primary);
   --van-nav-bar-text-color: #fff;
   --van-nav-bar-icon-color: #fff;
+  --van-tabbar-background: var(--color-surface);
+  --van-tabbar-item-active-color: var(--color-primary);
+  --van-button-primary-background: var(--color-primary);
+  --van-button-primary-border-color: var(--color-primary);
+  --van-switch-on-background: var(--color-primary);
+  --van-checkbox-checked-icon-color: var(--color-primary);
+  --van-radio-checked-icon-color: var(--color-primary);
+  --van-field-label-color: var(--color-text-primary);
+  --van-cell-border-color: var(--color-border);
 }
 
 html, body, #app {
   height: 100%;
   margin: 0;
   padding: 0;
-  background: var(--van-background);
+  background: var(--color-bg);
+  font-family: var(--font-family);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -20,28 +43,28 @@ html, body, #app {
 
 .stat-card {
   text-align: center;
-  padding: 16px 12px;
-  background: #fff;
-  border-radius: 8px;
-  margin: 8px;
+  padding: var(--space-lg) var(--space-md);
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  margin: var(--space-sm);
 }
 
 .stat-card__amount {
   font-size: 20px;
   font-weight: bold;
-  color: #323233;
+  color: var(--color-text-primary);
 }
 
 .stat-card__label {
   font-size: 12px;
-  color: #969799;
-  margin-top: 4px;
+  color: var(--color-text-secondary);
+  margin-top: var(--space-xs);
 }
 
 .expense-card {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
+  padding: var(--space-md) var(--space-lg);
 }
 
 .expense-card__icon {
@@ -52,7 +75,7 @@ html, body, #app {
   align-items: center;
   justify-content: center;
   font-size: 20px;
-  margin-right: 12px;
+  margin-right: var(--space-md);
   flex-shrink: 0;
 }
 
@@ -64,12 +87,12 @@ html, body, #app {
 .expense-card__category {
   font-size: 14px;
   font-weight: 500;
-  color: #323233;
+  color: var(--color-text-primary);
 }
 
 .expense-card__note {
   font-size: 12px;
-  color: #969799;
+  color: var(--color-text-secondary);
   margin-top: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -78,14 +101,14 @@ html, body, #app {
 
 .expense-card__time {
   font-size: 11px;
-  color: #c8c9cc;
+  color: var(--color-text-placeholder);
   margin-top: 2px;
 }
 
 .expense-card__amount {
   font-size: 16px;
   font-weight: bold;
-  color: #323233;
+  color: var(--color-text-primary);
   text-align: right;
   flex-shrink: 0;
 }
@@ -93,14 +116,14 @@ html, body, #app {
 .empty-placeholder {
   text-align: center;
   padding: 60px 0;
-  color: #969799;
+  color: var(--color-text-secondary);
 }
 
 .filter-bar {
   display: flex;
-  gap: 8px;
-  padding: 8px 12px;
-  background: #fff;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-surface);
   overflow-x: auto;
   white-space: nowrap;
 }
@@ -111,6 +134,6 @@ html, body, #app {
 
 .chart-box {
   width: 100%;
-  padding: 0 8px;
+  padding: 0 var(--space-sm);
   box-sizing: border-box;
 }

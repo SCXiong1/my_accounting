@@ -19,7 +19,7 @@ const {
   selectPeriod, openCustom, onPickerConfirm, onCancelCustom,
 } = usePeriodFilter()
 
-const TAG_PALETTE = ['#1989fa', '#07c160', '#ff976a', '#ee0a24', '#9c27b0', '#ffc300', '#00bcd4', '#795548']
+const TAG_PALETTE = ['#E8915A', '#7DB88B', '#7BA7C9', '#D96B6B', '#C49BD9', '#E8C76B', '#6BC5C5', '#B8927A']
 
 const selectedCategoryId = ref<number | null>(null)
 const busy = ref(false)
@@ -143,15 +143,15 @@ onUnmounted(() => {
       </van-button>
     </div>
 
-    <van-grid :column-num="4" :border="false" style="margin: 8px 4px;">
+    <van-grid :column-num="4" :border="false" class="stats-overview-grid">
       <van-grid-item v-for="item in [
         { label: '今日', val: store.overview.today },
         { label: '本周', val: store.overview.this_week },
         { label: '本月', val: store.overview.this_month },
         { label: '今年', val: store.overview.this_year },
       ]" :key="item.label">
-        <div class="stat-card" style="margin:0;width:100%;padding:10px 4px;">
-          <div class="stat-card__amount" style="font-size:15px;">{{ formatAmount(item.val) }}</div>
+        <div class="stat-card stats-overview-card">
+          <div class="stat-card__amount stats-overview-amount">{{ formatAmount(item.val) }}</div>
           <div class="stat-card__label">{{ item.label }}</div>
         </div>
       </van-grid-item>
@@ -160,25 +160,25 @@ onUnmounted(() => {
     <!-- 分类占比 -->
     <van-cell title="分类占比" title-style="font-weight:500;">
       <template #right-icon>
-        <span style="font-size:13px;color:#1989fa;" @click="goExpenseList">全部明细</span>
+        <span class="stats-detail-link" @click="goExpenseList">全部明细</span>
       </template>
     </van-cell>
-    <div v-if="!busy && store.categoryStats.length === 0" class="empty-placeholder" style="padding:30px 0;">
-      <div style="font-size:13px;color:#c8c9cc;">暂无数据</div>
+    <div v-if="!busy && store.categoryStats.length === 0" class="empty-placeholder stats-empty">
+      <div class="stats-empty-text">暂无数据</div>
     </div>
     <ChartPie v-else :data="catPieData" @legend-change="s => catLegendVisible = s" />
 
-    <div v-if="filteredCategoryStats.length > 0" style="padding:0 16px 12px;">
+    <div v-if="filteredCategoryStats.length > 0" class="stats-detail-list">
       <div
         v-for="s in filteredCategoryStats.slice(0, 8)" :key="s.category_id"
-        style="display:flex;align-items:center;padding:4px 0;font-size:13px;"
+        class="stats-detail-row"
         data-testid="stats-category-row"
         @click="router.push({ path: '/expenses', query: { category_id: String(s.category_id) } })"
       >
         <span>{{ s.category_icon }}</span>
-        <span style="flex:1;margin-left:6px;color:#323233;">{{ s.category_name }}</span>
-        <span style="color:#969799;margin-right:8px;">{{ s.percentage }}%</span>
-        <span style="font-weight:500;">{{ formatAmount(s.total_amount) }}</span>
+        <span class="stats-detail-name">{{ s.category_name }}</span>
+        <span class="stats-detail-pct">{{ s.percentage }}%</span>
+        <span class="stats-detail-amount">{{ formatAmount(s.total_amount) }}</span>
       </div>
     </div>
 
@@ -190,44 +190,43 @@ onUnmounted(() => {
         </van-tag>
       </template>
     </van-cell>
-    <div v-if="!busy && store.monthlyStats.length === 0" class="empty-placeholder" style="padding:30px 0;">
-      <div style="font-size:13px;color:#c8c9cc;">暂无数据</div>
+    <div v-if="!busy && store.monthlyStats.length === 0" class="empty-placeholder stats-empty">
+      <div class="stats-empty-text">暂无数据</div>
     </div>
     <ChartBar v-else :monthly-stats="store.monthlyStats" :get-details="catBarDetails" />
 
     <!-- 标签占比 -->
     <van-cell title="标签占比" title-style="font-weight:500;" />
-    <div v-if="!busy && store.tagStats.length === 0" class="empty-placeholder" style="padding:30px 0;">
-      <div style="font-size:13px;color:#c8c9cc;">暂无标签数据</div>
+    <div v-if="!busy && store.tagStats.length === 0" class="empty-placeholder stats-empty">
+      <div class="stats-empty-text">暂无标签数据</div>
     </div>
     <ChartPie v-else :data="tagPieData" data-testid="stats-tag-pie" @legend-change="s => tagLegendVisible = s" />
 
-    <div v-if="filteredTagStats.length > 0" style="padding:0 16px 20px;">
+    <div v-if="filteredTagStats.length > 0" class="stats-detail-list stats-detail-list--bottom">
       <div
         v-for="(t, i) in filteredTagStats.slice(0, 6)" :key="t.tag_id"
-        style="display:flex;align-items:center;padding:4px 0;font-size:13px;"
+        class="stats-detail-row"
         data-testid="stats-tag-row"
         @click="router.push({ path: '/expenses', query: { tag_id: String(t.tag_id) } })"
       >
-        <span style="width:8px;height:8px;border-radius:50%;margin-right:6px;flex-shrink:0;"
-          :style="{ background: TAG_PALETTE[i % TAG_PALETTE.length] }" />
-        <span style="flex:1;color:#323233;">{{ t.tag_name }}</span>
-        <span style="color:#969799;margin-right:8px;">{{ t.percentage }}%</span>
-        <span style="font-weight:500;">{{ formatAmount(t.total_amount) }}</span>
+        <span class="stats-tag-dot" :style="{ background: TAG_PALETTE[i % TAG_PALETTE.length] }" />
+        <span class="stats-detail-name">{{ t.tag_name }}</span>
+        <span class="stats-detail-pct">{{ t.percentage }}%</span>
+        <span class="stats-detail-amount">{{ formatAmount(t.total_amount) }}</span>
       </div>
     </div>
 
     <!-- 标签月度趋势 -->
     <van-cell title="标签月度趋势" title-style="font-weight:500;" />
-    <div v-if="!busy && store.monthlyStats.length === 0" class="empty-placeholder" style="padding:30px 0;">
-      <div style="font-size:13px;color:#c8c9cc;">暂无数据</div>
+    <div v-if="!busy && store.monthlyStats.length === 0" class="empty-placeholder stats-empty">
+      <div class="stats-empty-text">暂无数据</div>
     </div>
     <ChartBar v-else :monthly-stats="store.monthlyStats" :get-details="tagBarDetails" :palette="TAG_PALETTE" />
-    <div style="height:20px;"></div>
+    <div class="stats-bottom-spacer"></div>
 
     <van-popup v-model:show="showCustomPopup" position="bottom" round>
-      <div style="padding:16px;">
-        <div style="text-align:center;font-size:16px;font-weight:500;margin-bottom:12px;">
+      <div class="custom-popup">
+        <div class="custom-popup__title">
           {{ pickStep === 'start' ? '选择开始月份' : '选择结束月份' }}
         </div>
         <van-date-picker
@@ -236,10 +235,97 @@ onUnmounted(() => {
           :columns-type="['year', 'month']"
           @confirm="onPickerConfirm"
         />
-        <div style="padding:8px 16px 16px;">
+        <div class="custom-popup__actions">
           <van-button round block @click="onCancelCustom">取消</van-button>
         </div>
       </div>
     </van-popup>
   </div>
 </template>
+
+<style scoped>
+.stats-overview-grid {
+  margin: var(--space-sm) var(--space-xs);
+}
+
+.stats-overview-card {
+  margin: 0;
+  width: 100%;
+  padding: 10px var(--space-xs);
+}
+
+.stats-overview-amount {
+  font-size: 15px;
+}
+
+.stats-detail-link {
+  font-size: 13px;
+  color: var(--color-primary);
+}
+
+.stats-empty {
+  padding: 30px 0;
+}
+
+.stats-empty-text {
+  font-size: 13px;
+  color: var(--color-text-placeholder);
+}
+
+.stats-detail-list {
+  padding: 0 var(--space-lg) var(--space-md);
+}
+
+.stats-detail-list--bottom {
+  padding-bottom: var(--space-xl);
+}
+
+.stats-detail-row {
+  display: flex;
+  align-items: center;
+  padding: var(--space-xs) 0;
+  font-size: 13px;
+}
+
+.stats-detail-name {
+  flex: 1;
+  margin-left: 6px;
+  color: var(--color-text-primary);
+}
+
+.stats-detail-pct {
+  color: var(--color-text-secondary);
+  margin-right: var(--space-sm);
+}
+
+.stats-detail-amount {
+  font-weight: 500;
+}
+
+.stats-tag-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+.stats-bottom-spacer {
+  height: 20px;
+}
+
+.custom-popup {
+  padding: var(--space-lg);
+}
+
+.custom-popup__title {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: var(--space-md);
+}
+
+.custom-popup__actions {
+  padding: var(--space-sm) var(--space-lg) var(--space-lg);
+}
+</style>

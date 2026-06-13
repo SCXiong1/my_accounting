@@ -79,16 +79,16 @@ const selectedNames = computed(() => {
     @click="open"
   />
   <van-popup v-model:show="showDialog" position="bottom" round :style="{ height: '55%' }" data-testid="tag-checkbox__popup">
-    <div style="padding: 16px; display: flex; flex-direction: column; height: 100%;">
-      <h4 style="margin: 0 0 12px;">选择标签</h4>
+    <div class="tag-popup">
+      <h4 class="tag-popup__title">选择标签</h4>
 
       <!-- 快速新增 -->
-      <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+      <div class="tag-popup__add-row">
         <van-field
           v-model="newTagName"
           placeholder="输入新标签名"
           :border="true"
-          style="flex: 1;"
+          class="tag-popup__add-input"
         />
         <van-button
           type="primary"
@@ -101,8 +101,8 @@ const selectedNames = computed(() => {
       </div>
 
       <!-- 已有标签列表 -->
-      <div style="flex: 1; overflow-y: auto;">
-        <div v-if="store.list.length === 0" style="text-align: center; padding: 24px; color: #969799;">
+      <div class="tag-popup__list">
+        <div v-if="store.list.length === 0" class="tag-popup__empty">
           暂无标签，请先新增
         </div>
         <van-checkbox-group :model-value="modelValue" data-testid="tag-checkbox__group">
@@ -121,9 +121,47 @@ const selectedNames = computed(() => {
         </van-checkbox-group>
       </div>
 
-      <div style="padding: 16px 0;">
+      <div class="tag-popup__confirm">
         <van-button round block type="primary" @click="showDialog = false">确定</van-button>
       </div>
     </div>
   </van-popup>
 </template>
+
+<style scoped>
+.tag-popup {
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.tag-popup__title {
+  margin: 0 0 var(--space-md);
+}
+
+.tag-popup__add-row {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.tag-popup__add-input {
+  flex: 1;
+}
+
+.tag-popup__list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.tag-popup__empty {
+  text-align: center;
+  padding: var(--space-xl);
+  color: var(--color-text-secondary);
+}
+
+.tag-popup__confirm {
+  padding: var(--space-lg) 0;
+}
+</style>

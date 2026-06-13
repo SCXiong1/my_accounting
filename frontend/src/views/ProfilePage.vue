@@ -70,18 +70,14 @@ async function handleLogout() {
   <div class="page-container">
     <van-nav-bar title="我的" />
 
-    <div style="text-align: center; padding: 32px 0 24px;">
-      <div style="
-        width: 64px; height: 64px; border-radius: 50%; background: var(--van-primary-color);
-        display: inline-flex; align-items: center; justify-content: center;
-        font-size: 28px; color: #fff;
-      ">
+    <div class="profile-header">
+      <div class="profile-avatar">
         {{ (auth.user?.nickname || auth.user?.username || '?')[0] }}
       </div>
-      <div style="margin-top: 12px; font-size: 18px; font-weight: 500;">
+      <div class="profile-name">
         {{ auth.user?.nickname || auth.user?.username }}
       </div>
-      <div style="font-size: 13px; color: #969799;">
+      <div class="profile-username">
         @{{ auth.user?.username }}
       </div>
     </div>
@@ -93,7 +89,7 @@ async function handleLogout() {
       <van-cell title="回收站" is-link to="/trash" />
     </van-cell-group>
 
-    <div style="padding: 32px 16px;">
+    <div class="profile-logout">
       <van-button round block type="danger" data-testid="profile-logout" @click="handleLogout">退出登录</van-button>
     </div>
 
@@ -105,7 +101,7 @@ async function handleLogout() {
       @confirm="saveNickname"
       :confirm-button-disabled="submitting"
     >
-      <div style="padding: 12px 16px;">
+      <div class="profile-dialog-body">
         <van-field v-model="nickname" label="昵称" placeholder="输入新昵称" />
       </div>
     </van-dialog>
@@ -118,10 +114,48 @@ async function handleLogout() {
       @confirm="savePassword"
       :confirm-button-disabled="submitting"
     >
-      <div style="padding: 12px 16px;">
+      <div class="profile-dialog-body">
         <van-field v-model="oldPassword" type="password" label="旧密码" placeholder="输入旧密码" />
         <van-field v-model="newPassword" type="password" label="新密码" placeholder="至少 6 位" />
       </div>
     </van-dialog>
   </div>
 </template>
+
+<style scoped>
+.profile-header {
+  text-align: center;
+  padding: var(--space-2xl) 0 var(--space-xl);
+}
+
+.profile-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: var(--color-surface);
+}
+
+.profile-name {
+  margin-top: var(--space-md);
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.profile-username {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.profile-logout {
+  padding: var(--space-2xl) var(--space-lg);
+}
+
+.profile-dialog-body {
+  padding: var(--space-md) var(--space-lg);
+}
+</style>

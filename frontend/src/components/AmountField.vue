@@ -24,7 +24,14 @@ const yuanText = computed({
     data-testid="amount-field"
   >
     <template #left-icon>
-      <span style="font-size: 20px; font-weight: bold;">¥</span>
+      <span class="amount-symbol">¥</span>
     </template>
   </van-field>
 </template>
+
+<style scoped>
+.amount-symbol {
+  font-size: 20px;
+  font-weight: bold;
+}
+</style>

@@ -61,7 +61,7 @@ setTimeout(() => showError(getErrorMessage(e, '重置失败')), 300)
 <template>
   <div class="page-container">
     <van-nav-bar title="登录" />
-    <div style="padding: 24px 16px 0;">
+    <div class="login-form">
       <van-form @submit="handleLogin">
         <van-field
           v-model="username"
@@ -82,7 +82,7 @@ setTimeout(() => showError(getErrorMessage(e, '重置失败')), 300)
           clearable
           data-testid="login-password"
         />
-        <div style="margin: 24px 16px;">
+        <div class="login-actions">
           <van-button
             round
             block
@@ -96,11 +96,11 @@ setTimeout(() => showError(getErrorMessage(e, '重置失败')), 300)
           </van-button>
         </div>
       </van-form>
-      <div style="text-align: center; margin-top: 8px; display: flex; justify-content: space-around;">
-        <router-link to="/register" style="color: var(--van-primary-color); font-size: 14px;">
+      <div class="login-links">
+        <router-link to="/register" class="login-link">
           没有账号？去注册
         </router-link>
-        <span style="color: var(--van-primary-color); font-size: 14px; cursor: pointer;" @click="showForgot = true">
+        <span class="login-link" @click="showForgot = true">
           忘记密码
         </span>
       </div>
@@ -115,14 +115,47 @@ setTimeout(() => showError(getErrorMessage(e, '重置失败')), 300)
       :confirm-button-disabled="forgotLoading"
       confirm-button-text="重置密码"
     >
-      <div style="padding: 12px 16px;">
+      <div class="forgot-form">
         <van-field v-model="forgotUsername" label="用户名" placeholder="请输入你的用户名" />
         <van-field v-model="forgotEmail" label="注册邮箱" placeholder="请输入注册时的邮箱" />
         <van-field v-model="forgotNewPwd" type="password" label="新密码" placeholder="输入新密码（至少6位）" />
-        <div style="font-size: 12px; color: #969799; margin-top: 8px;">
+        <div class="forgot-hint">
           输入用户名和注册邮箱验证身份后，即可设置新密码。
         </div>
       </div>
     </van-dialog>
   </div>
 </template>
+
+<style scoped>
+.login-form {
+  padding: var(--space-xl) var(--space-lg) 0;
+}
+
+.login-actions {
+  margin: var(--space-xl) var(--space-lg);
+}
+
+.login-links {
+  text-align: center;
+  margin-top: var(--space-sm);
+  display: flex;
+  justify-content: space-around;
+}
+
+.login-link {
+  color: var(--color-primary);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.forgot-form {
+  padding: var(--space-md) var(--space-lg);
+}
+
+.forgot-hint {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: var(--space-sm);
+}
+</style>

@@ -92,17 +92,17 @@ showError('该分类下有支出记录，无法删除')
   <div class="page-container">
     <van-nav-bar title="分类管理" left-text="返回" left-arrow data-testid="category-manage-nav" @click-left="$router.back()" />
 
-    <van-cell-group v-if="store.list.length > 0" inset style="margin-top: 12px;">
+    <van-cell-group v-if="store.list.length > 0" inset class="cat-list">
       <van-swipe-cell v-for="cat in store.list" :key="cat.id" data-testid="category-manage-swipe-cell">
         <van-cell :title="cat.name" center @click="openEdit(cat)">
           <template #icon>
-            <span style="font-size: 24px; margin-right: 12px;">{{ cat.icon }}</span>
+            <span class="cat-list__icon">{{ cat.icon }}</span>
           </template>
           <template #label>
             <span v-if="cat.expense_count > 0">
               {{ cat.expense_count }} 笔 · {{ formatAmount(cat.total_amount) }}
             </span>
-            <span v-else style="color: #c8c9cc;">暂无支出</span>
+            <span v-else class="cat-list__empty">暂无支出</span>
           </template>
         </van-cell>
         <template #right>
@@ -112,25 +112,25 @@ showError('该分类下有支出记录，无法删除')
             text="删除"
             data-testid="category-manage-delete-btn"
             @click="handleDelete(cat)"
-            style="height: 100%;"
+            class="cat-list__delete-btn"
           />
         </template>
       </van-swipe-cell>
     </van-cell-group>
 
     <div v-else class="empty-placeholder">
-      <div style="font-size: 48px;">📂</div>
-      <div style="margin-top: 12px;">暂无自定义分类</div>
+      <div class="cat-empty-icon">📂</div>
+      <div class="cat-empty-text">暂无自定义分类</div>
     </div>
 
-    <div style="padding: 16px;">
+    <div class="cat-add-btn">
       <van-button round block type="primary" data-testid="category-manage-add-btn" @click="openCreate">新增分类</van-button>
     </div>
 
     <!-- 新增/编辑弹窗 -->
     <van-popup v-model:show="showForm" position="bottom" round :style="{ height: '60%' }" data-testid="category-manage-popup">
-      <div style="padding: 16px;">
-        <h4 style="margin: 0 0 16px;">{{ editing ? '编辑分类' : '新增分类' }}</h4>
+      <div class="cat-popup">
+        <h4 class="cat-popup__title">{{ editing ? '编辑分类' : '新增分类' }}</h4>
         <van-field
           v-model="formName"
           label="名称"
@@ -138,45 +138,34 @@ showError('该分类下有支出记录，无法删除')
           :rules="[{ required: true }]"
           data-testid="category-manage-name"
         />
-        <div style="padding: 12px 16px;">
-          <div style="font-size: 14px; color: #646566; margin-bottom: 8px;">图标</div>
-          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+        <div class="cat-popup__section">
+          <div class="cat-popup__label">图标</div>
+          <div class="cat-popup__grid">
             <span
               v-for="icon in iconOptions"
               :key="icon"
               data-testid="category-manage-icon"
               @click="formIcon = icon"
-              :style="{
-                fontSize: '28px',
-                padding: '6px',
-                borderRadius: '8px',
-                background: formIcon === icon ? '#e8f4ff' : 'transparent',
-                border: formIcon === icon ? '2px solid #1989fa' : '2px solid transparent',
-                cursor: 'pointer',
-              }"
+              class="cat-icon-option"
+              :class="{ 'cat-icon-option--active': formIcon === icon }"
             >{{ icon }}</span>
           </div>
         </div>
-        <div style="padding: 12px 16px;">
-          <div style="font-size: 14px; color: #646566; margin-bottom: 8px;">颜色</div>
-          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+        <div class="cat-popup__section">
+          <div class="cat-popup__label">颜色</div>
+          <div class="cat-popup__grid">
             <span
               v-for="color in colorOptions"
               :key="color"
               data-testid="category-manage-color"
               @click="formColor = color"
-              :style="{
-                width: '28px',
-                height: '28px',
-                borderRadius: '50%',
-                background: color,
-                border: formColor === color ? '3px solid #1989fa' : '3px solid transparent',
-                cursor: 'pointer',
-              }"
+              class="cat-color-option"
+              :class="{ 'cat-color-option--active': formColor === color }"
+              :style="{ background: color }"
             />
           </div>
         </div>
-        <div style="padding: 16px;">
+        <div class="cat-popup__save">
           <van-button
             round
             block
@@ -193,3 +182,88 @@ showError('该分类下有支出记录，无法删除')
     </van-popup>
   </div>
 </template>
+
+<style scoped>
+.cat-list {
+  margin-top: var(--space-md);
+}
+
+.cat-list__icon {
+  font-size: 24px;
+  margin-right: var(--space-md);
+}
+
+.cat-list__empty {
+  color: var(--color-text-placeholder);
+}
+
+.cat-list__delete-btn {
+  height: 100%;
+}
+
+.cat-empty-icon {
+  font-size: 48px;
+}
+
+.cat-empty-text {
+  margin-top: var(--space-md);
+}
+
+.cat-add-btn {
+  padding: var(--space-lg);
+}
+
+.cat-popup {
+  padding: var(--space-lg);
+}
+
+.cat-popup__title {
+  margin: 0 0 var(--space-lg);
+}
+
+.cat-popup__section {
+  padding: var(--space-md) var(--space-lg);
+}
+
+.cat-popup__label {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-sm);
+}
+
+.cat-popup__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.cat-icon-option {
+  font-size: 28px;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.cat-icon-option--active {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+.cat-color-option {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  cursor: pointer;
+}
+
+.cat-color-option--active {
+  border-color: var(--color-primary);
+}
+
+.cat-popup__save {
+  padding: var(--space-lg);
+}
+</style>

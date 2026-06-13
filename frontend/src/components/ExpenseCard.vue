@@ -28,7 +28,7 @@ const desc = computed(() => {
       <div v-if="expense.note" class="expense-card__note" data-testid="expense-card__note">{{ expense.note }}</div>
       <div class="expense-card__time" data-testid="expense-card__time">{{ formatShortDate(expense.transaction_time) }}</div>
     </div>
-    <div class="expense-card__amount" data-testid="expense-card__amount" :style="{ color: '#323233' }">
+    <div class="expense-card__amount" data-testid="expense-card__amount">
       {{ formatAmount(expense.amount) }}
     </div>
   </div>

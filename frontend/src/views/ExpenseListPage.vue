@@ -183,7 +183,7 @@ async function handleDelete(id: number) {
     <van-nav-bar title="支出记录" data-testid="expense-list-nav" />
 
     <!-- 搜索栏 -->
-    <div style="padding: 8px 12px; background: #fff;">
+    <div class="expense-search-bar">
       <van-search
         v-model="filterKeyword"
         placeholder="搜索金额/分类/标签/备注..."
@@ -219,7 +219,7 @@ async function handleDelete(id: number) {
       >
         {{ sortBy === 'time' ? '时间↓' : '金额↓' }}
       </van-tag>
-      <span style="font-size: 12px; color: #969799; line-height: 24px; margin-left: auto;">
+      <span class="expense-total-count">
         共 {{ store.total }} 条
       </span>
     </div>
@@ -234,8 +234,8 @@ async function handleDelete(id: number) {
         :immediate-check="false"
       >
         <div v-if="store.items.length === 0 && !store.loading" class="empty-placeholder">
-          <div style="font-size: 48px;">📝</div>
-          <div style="margin-top: 12px;">暂无支出记录</div>
+          <div class="expense-empty-icon">📝</div>
+          <div class="expense-empty-text">暂无支出记录</div>
         </div>
         <div v-for="expense in store.items" :key="expense.id"
           @pointerdown="onPointerDown"
@@ -251,17 +251,17 @@ async function handleDelete(id: number) {
                 text="删除"
                 data-testid="expense-list-delete-btn"
 @click.stop="handleDelete(expense.id)"
-                style="height: 100%;"
+                class="expense-delete-btn"
               />
             </template>
           </van-swipe-cell>
-          <van-divider style="margin: 0;" />
+          <van-divider class="expense-divider" />
         </div>
       </van-list>
     </van-pull-refresh>
 
     <!-- 新增按钮 -->
-    <div style="position: fixed; right: 16px; bottom: 70px;">
+    <div class="expense-fab">
       <van-button
         icon="plus"
         type="primary"
@@ -278,3 +278,39 @@ async function handleDelete(id: number) {
     <FilterPicker v-model:show="showTagFilter" :columns="tagColumns" @select="onTagSelect" />
   </div>
 </template>
+
+<style scoped>
+.expense-search-bar {
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-surface);
+}
+
+.expense-total-count {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 24px;
+  margin-left: auto;
+}
+
+.expense-empty-icon {
+  font-size: 48px;
+}
+
+.expense-empty-text {
+  margin-top: var(--space-md);
+}
+
+.expense-delete-btn {
+  height: 100%;
+}
+
+.expense-divider {
+  margin: 0;
+}
+
+.expense-fab {
+  position: fixed;
+  right: var(--space-lg);
+  bottom: 70px;
+}
+</style>
