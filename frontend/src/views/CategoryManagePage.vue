@@ -90,10 +90,10 @@ showError('该分类下有支出记录，无法删除')
 
 <template>
   <div class="page-container">
-    <van-nav-bar title="分类管理" left-text="返回" left-arrow @click-left="$router.back()" />
+    <van-nav-bar title="分类管理" left-text="返回" left-arrow data-testid="category-manage-nav" @click-left="$router.back()" />
 
     <van-cell-group v-if="store.list.length > 0" inset style="margin-top: 12px;">
-      <van-swipe-cell v-for="cat in store.list" :key="cat.id">
+      <van-swipe-cell v-for="cat in store.list" :key="cat.id" data-testid="category-manage-swipe-cell">
         <van-cell :title="cat.name" center @click="openEdit(cat)">
           <template #icon>
             <span style="font-size: 24px; margin-right: 12px;">{{ cat.icon }}</span>
@@ -110,6 +110,7 @@ showError('该分类下有支出记录，无法删除')
             square
             type="danger"
             text="删除"
+            data-testid="category-manage-delete-btn"
             @click="handleDelete(cat)"
             style="height: 100%;"
           />
@@ -123,11 +124,11 @@ showError('该分类下有支出记录，无法删除')
     </div>
 
     <div style="padding: 16px;">
-      <van-button round block type="primary" @click="openCreate">新增分类</van-button>
+      <van-button round block type="primary" data-testid="category-manage-add-btn" @click="openCreate">新增分类</van-button>
     </div>
 
     <!-- 新增/编辑弹窗 -->
-    <van-popup v-model:show="showForm" position="bottom" round :style="{ height: '60%' }">
+    <van-popup v-model:show="showForm" position="bottom" round :style="{ height: '60%' }" data-testid="category-manage-popup">
       <div style="padding: 16px;">
         <h4 style="margin: 0 0 16px;">{{ editing ? '编辑分类' : '新增分类' }}</h4>
         <van-field
@@ -135,6 +136,7 @@ showError('该分类下有支出记录，无法删除')
           label="名称"
           placeholder="分类名称"
           :rules="[{ required: true }]"
+          data-testid="category-manage-name"
         />
         <div style="padding: 12px 16px;">
           <div style="font-size: 14px; color: #646566; margin-bottom: 8px;">图标</div>
@@ -142,6 +144,7 @@ showError('该分类下有支出记录，无法删除')
             <span
               v-for="icon in iconOptions"
               :key="icon"
+              data-testid="category-manage-icon"
               @click="formIcon = icon"
               :style="{
                 fontSize: '28px',
@@ -160,6 +163,7 @@ showError('该分类下有支出记录，无法删除')
             <span
               v-for="color in colorOptions"
               :key="color"
+              data-testid="category-manage-color"
               @click="formColor = color"
               :style="{
                 width: '28px',
@@ -179,6 +183,7 @@ showError('该分类下有支出记录，无法删除')
             type="primary"
             :loading="submitting"
             loading-text="保存中..."
+            data-testid="category-manage-save"
             @click="handleSubmit"
           >
             保存

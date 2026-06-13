@@ -129,6 +129,7 @@ onUnmounted(() => {
         v-for="p in periods" :key="p.key"
         :type="activePeriod === p.key ? 'primary' : 'default'"
         size="small" round
+        data-testid="stats-period-btn"
         @click="selectPeriod(p.key)"
       >
         {{ p.label }}
@@ -165,12 +166,13 @@ onUnmounted(() => {
     <div v-if="!busy && store.categoryStats.length === 0" class="empty-placeholder" style="padding:30px 0;">
       <div style="font-size:13px;color:#c8c9cc;">暂无数据</div>
     </div>
-    <ChartPie v-else :data="catPieData" @legend-change="s => catLegendVisible = s" />
+    <ChartPie v-else :data="catPieData" data-testid="stats-chart-pie" @legend-change="s => catLegendVisible = s" />
 
     <div v-if="filteredCategoryStats.length > 0" style="padding:0 16px 12px;">
       <div
         v-for="s in filteredCategoryStats.slice(0, 8)" :key="s.category_id"
         style="display:flex;align-items:center;padding:4px 0;font-size:13px;"
+        data-testid="stats-category-row"
         @click="router.push({ path: '/expenses', query: { category_id: String(s.category_id) } })"
       >
         <span>{{ s.category_icon }}</span>
@@ -204,6 +206,7 @@ onUnmounted(() => {
       <div
         v-for="(t, i) in filteredTagStats.slice(0, 6)" :key="t.tag_id"
         style="display:flex;align-items:center;padding:4px 0;font-size:13px;"
+        data-testid="stats-tag-row"
         @click="router.push({ path: '/expenses', query: { tag_id: String(t.tag_id) } })"
       >
         <span style="width:8px;height:8px;border-radius:50%;margin-right:6px;flex-shrink:0;"

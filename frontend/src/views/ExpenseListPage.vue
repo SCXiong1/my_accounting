@@ -180,7 +180,7 @@ async function handleDelete(id: number) {
 
 <template>
   <div class="page-container">
-    <van-nav-bar title="支出记录" />
+    <van-nav-bar title="支出记录" data-testid="expense-list-nav" />
 
     <!-- 搜索栏 -->
     <div style="padding: 8px 12px; background: #fff;">
@@ -242,13 +242,14 @@ async function handleDelete(id: number) {
           @pointermove="onPointerMove"
           @pointerup="onPointerUp"
           @click="goEdit(expense.id)">
-          <van-swipe-cell>
+          <van-swipe-cell data-testid="expense-list-swipe-cell">
             <ExpenseCard :expense="expense" />
             <template #right>
               <van-button
                 square
                 type="danger"
                 text="删除"
+                data-testid="expense-list-delete-btn"
 @click.stop="handleDelete(expense.id)"
                 style="height: 100%;"
               />

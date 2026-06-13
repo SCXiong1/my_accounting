@@ -20,14 +20,14 @@ testAuth.describe('S3: 记账表单移动端交互', () => {
     await page.getByRole('button', { name: /分类/ }).click();
 
     // popup 可见
-    const popup = page.locator('.van-popup').filter({ has: page.locator('.van-picker') });
+    const popup = page.getByTestId('category-picker__popup');
     await expect(popup).toBeVisible();
 
     // 选择"交通"
     await selectPickerOption(page, '交通');
 
     // 字段显示 "🚗 交通"
-    await expect(page.locator('.van-field', { hasText: /分类/ }).locator('input')).toHaveValue(/交通/);
+    await expect(page.getByTestId('category-picker').locator('input')).toHaveValue(/交通/);
 
     // popup 关闭
     await expect(popup).not.toBeVisible();
@@ -41,19 +41,19 @@ testAuth.describe('S3: 记账表单移动端交互', () => {
     await expect(page.getByText('选择标签')).toBeVisible();
 
     // 勾选"餐饮"
-    const popup = page.locator('.van-popup').filter({ hasText: '选择标签' });
-    await popup.locator('.van-cell', { hasText: '餐饮' }).click();
+    const popup = page.getByTestId('tag-checkbox__popup');
+    await popup.getByTestId('tag-checkbox__cell').filter({ hasText: '餐饮' }).click();
 
     // 点击确定（限定在 popup 内）
     await popup.getByRole('button', { name: '确定' }).click();
 
     // 字段显示"餐饮"
-    await expect(page.locator('.van-field', { hasText: /标签/ }).locator('input')).toHaveValue(/餐饮/);
+    await expect(page.getByTestId('tag-checkbox').locator('input')).toHaveValue(/餐饮/);
   });
 
   testAuth('日期 Picker：点击 → 弹出 → 确认 → 关闭', async ({ page }) => {
     // 点击日期字段打开 picker
-    const dateField = page.locator('.van-field', { hasText: '日期' });
+    const dateField = page.getByTestId('expense-form-date');
     await dateField.click();
 
     // popup 可见

@@ -21,6 +21,7 @@ const yuanText = computed({
     label="金额"
     placeholder="0.00"
     input-align="right"
+    data-testid="amount-field"
   >
     <template #left-icon>
       <span style="font-size: 20px; font-weight: bold;">¥</span>

@@ -12,13 +12,13 @@ testAuth.describe('S4: 统计页', () => {
     for (const label of periods) {
       await page.getByRole('button', { name: label }).click();
       // ECharts 渲染到 canvas
-      await expect(page.locator('canvas').first()).toBeVisible();
+      await expect(page.getByTestId('chart-pie').locator('canvas')).toBeVisible();
     }
   });
 
   testAuth('分类点击跳转：点餐饮分类行 → /expenses?category_id=\\d+', async ({ page }) => {
-    // "餐饮"在分类和标签区域都出现，取第一个（分类区域）
-    await page.getByText('餐饮').first().click();
+    // "餐饮"在分类和标签区域都出现，用 testid 消歧
+    await page.getByTestId('stats-category-row').filter({ hasText: '餐饮' }).click();
 
     // 验证 URL 跳转
     await page.waitForURL(/\/expenses\?category_id=\d+/);
@@ -26,8 +26,8 @@ testAuth.describe('S4: 统计页', () => {
   });
 
   testAuth('标签点击跳转：点标签行 → /expenses?tag_id=\\d+', async ({ page }) => {
-    // 标签名在分类和标签区域都出现，取第二个（标签区域）
-    await page.getByText('餐饮').nth(1).click();
+    // 标签名在分类和标签区域都出现，用 testid 消歧
+    await page.getByTestId('stats-tag-row').filter({ hasText: '餐饮' }).click();
 
     // 验证 URL 跳转
     await page.waitForURL(/\/expenses\?tag_id=\d+/);

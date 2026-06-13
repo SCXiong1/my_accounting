@@ -45,11 +45,13 @@ function open() {
     readonly
     label="分类"
     placeholder="请选择分类"
+    data-testid="category-picker"
     @click="open"
   />
-  <van-popup v-model:show="showPicker" position="bottom" round>
+  <van-popup v-model:show="showPicker" position="bottom" round data-testid="category-picker__popup">
     <van-picker
       :columns="pickerColumns"
+      data-testid="category-picker__column"
       @confirm="({ selectedValues }: { selectedValues: number[] }) => onSelect(selectedValues[0])"
       @cancel="showPicker = false"
     />

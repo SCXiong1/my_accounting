@@ -75,9 +75,10 @@ const selectedNames = computed(() => {
     readonly
     label="标签"
     :placeholder="selectedNames || '选择标签（可选）'"
+    data-testid="tag-checkbox"
     @click="open"
   />
-  <van-popup v-model:show="showDialog" position="bottom" round :style="{ height: '55%' }">
+  <van-popup v-model:show="showDialog" position="bottom" round :style="{ height: '55%' }" data-testid="tag-checkbox__popup">
     <div style="padding: 16px; display: flex; flex-direction: column; height: 100%;">
       <h4 style="margin: 0 0 12px;">选择标签</h4>
 
@@ -104,12 +105,13 @@ const selectedNames = computed(() => {
         <div v-if="store.list.length === 0" style="text-align: center; padding: 24px; color: #969799;">
           暂无标签，请先新增
         </div>
-        <van-checkbox-group :model-value="modelValue">
+        <van-checkbox-group :model-value="modelValue" data-testid="tag-checkbox__group">
           <van-cell
             v-for="tag in store.list"
             :key="tag.id"
             :title="tag.name"
             clickable
+            data-testid="tag-checkbox__cell"
             @click="toggleTag(tag.id)"
           >
             <template #right-icon>

@@ -16,7 +16,7 @@ const desc = computed(() => {
 </script>
 
 <template>
-  <div class="expense-card">
+  <div class="expense-card" data-testid="expense-card">
     <div
       class="expense-card__icon"
       :style="{ background: expense.category.color + '20', color: expense.category.color }"
@@ -24,11 +24,11 @@ const desc = computed(() => {
       {{ expense.category.icon }}
     </div>
     <div class="expense-card__info">
-      <div class="expense-card__category">{{ desc }}</div>
-      <div v-if="expense.note" class="expense-card__note">{{ expense.note }}</div>
-      <div class="expense-card__time">{{ formatShortDate(expense.transaction_time) }}</div>
+      <div class="expense-card__category" data-testid="expense-card__category">{{ desc }}</div>
+      <div v-if="expense.note" class="expense-card__note" data-testid="expense-card__note">{{ expense.note }}</div>
+      <div class="expense-card__time" data-testid="expense-card__time">{{ formatShortDate(expense.transaction_time) }}</div>
     </div>
-    <div class="expense-card__amount" :style="{ color: '#323233' }">
+    <div class="expense-card__amount" data-testid="expense-card__amount" :style="{ color: '#323233' }">
       {{ formatAmount(expense.amount) }}
     </div>
   </div>
