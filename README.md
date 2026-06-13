@@ -100,6 +100,7 @@ frontend/
     composables/ # Vue composables (charts, filters)
     lib/         # HTTP client, token, notifications
     core/        # Pure utility functions (format, time)
+    styles/      # Design tokens (tokens.css) + global CSS overrides (global.css)
 e2e/
   playwright.config.ts  # Playwright config (webServer, devices, projects)
   global-setup.ts       # Test data seeding + auth state
