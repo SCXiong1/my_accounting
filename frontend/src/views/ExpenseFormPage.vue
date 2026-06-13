@@ -115,14 +115,14 @@ async function handleSubmit() {
   <div class="page-container">
     <van-nav-bar :title="isEdit ? '编辑支出' : '新增支出'" left-text="取消" left-arrow data-testid="expense-form-nav" @click-left="$router.back()" />
 
-    <van-loading v-if="loading" style="padding: 48px; text-align: center;" />
+    <van-loading v-if="loading" class="form-loading" />
 
-    <div v-else style="padding: 12px 0;">
+    <div v-else class="form-body">
       <AmountField v-model="amount" />
-      <div v-if="amountError" style="color: #ee0a24; font-size: 12px; padding: 0 16px;">{{ amountError }}</div>
+      <div v-if="amountError" class="form-error">{{ amountError }}</div>
 
       <CategoryPicker v-model="categoryId" />
-      <div v-if="categoryError" style="color: #ee0a24; font-size: 12px; padding: 0 16px;">{{ categoryError }}</div>
+      <div v-if="categoryError" class="form-error">{{ categoryError }}</div>
 
       <van-field
         :model-value="dateDisplay"
@@ -146,7 +146,7 @@ async function handleSubmit() {
         data-testid="expense-form-note"
       />
 
-      <div style="margin: 24px 16px;">
+      <div class="form-submit">
         <van-button
           round
           block
@@ -174,3 +174,24 @@ async function handleSubmit() {
     </van-popup>
   </div>
 </template>
+
+<style scoped>
+.form-loading {
+  padding: 48px;
+  text-align: center;
+}
+
+.form-body {
+  padding: var(--space-md) 0;
+}
+
+.form-error {
+  color: var(--color-danger);
+  font-size: 12px;
+  padding: 0 var(--space-lg);
+}
+
+.form-submit {
+  margin: var(--space-xl) var(--space-lg);
+}
+</style>

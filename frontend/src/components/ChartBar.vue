@@ -94,5 +94,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="chartRef" class="chart-box" data-testid="chart-bar" style="height:320px;"></div>
+  <div ref="chartRef" class="chart-box chart-bar" data-testid="chart-bar"></div>
 </template>
+
+<style scoped>
+.chart-bar {
+  height: 320px;
+}
+</style>

@@ -70,7 +70,7 @@ async function handleDelete(tag: Tag) {
   <div class="page-container">
     <van-nav-bar title="标签管理" left-text="返回" left-arrow @click-left="$router.back()" />
 
-    <div v-if="store.list.length > 0" style="padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 8px;">
+    <div v-if="store.list.length > 0" class="tag-list">
       <van-tag
         v-for="tag in store.list"
         :key="tag.id"
@@ -80,19 +80,19 @@ async function handleDelete(tag: Tag) {
         @close="handleDelete(tag)"
         @click="openEdit(tag)"
         type="primary"
-        style="cursor: pointer;"
+        class="tag-list__item"
       >
         {{ tag.name }}
-        <span v-if="tag.expense_count > 0" style="opacity: 0.7;"> ({{ tag.expense_count }})</span>
+        <span v-if="tag.expense_count > 0" class="tag-list__count"> ({{ tag.expense_count }})</span>
       </van-tag>
     </div>
 
     <div v-else class="empty-placeholder">
-      <div style="font-size: 48px;">🏷️</div>
-      <div style="margin-top: 12px;">暂无标签</div>
+      <div class="tag-empty-icon">🏷️</div>
+      <div class="tag-empty-text">暂无标签</div>
     </div>
 
-    <div style="padding: 16px;">
+    <div class="tag-add-btn">
       <van-button round block type="primary" data-testid="tag-manage-add-btn" @click="openCreate">新增标签</van-button>
     </div>
 
@@ -105,7 +105,7 @@ async function handleDelete(tag: Tag) {
       show-cancel-button
     >
       <van-form @submit="handleSubmit">
-        <div style="padding: 12px 16px;">
+        <div class="tag-dialog-body">
           <van-field
             v-model="tagName"
             label="名称"
@@ -139,3 +139,36 @@ async function handleDelete(tag: Tag) {
     </van-dialog>
   </div>
 </template>
+
+<style scoped>
+.tag-list {
+  padding: var(--space-md) var(--space-lg);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.tag-list__item {
+  cursor: pointer;
+}
+
+.tag-list__count {
+  opacity: 0.7;
+}
+
+.tag-empty-icon {
+  font-size: 48px;
+}
+
+.tag-empty-text {
+  margin-top: var(--space-md);
+}
+
+.tag-add-btn {
+  padding: var(--space-lg);
+}
+
+.tag-dialog-body {
+  padding: var(--space-md) var(--space-lg);
+}
+</style>
