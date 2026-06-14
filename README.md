@@ -50,7 +50,7 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:5713` (dev) or `http://localhost:8080` (production).
+Open `http://localhost:5173` (dev) or `http://localhost:8080` (production).
 
 ## Development
 

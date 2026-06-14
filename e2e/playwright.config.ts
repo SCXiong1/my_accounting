@@ -10,7 +10,7 @@ export default defineConfig({
   timeout: 60000,
   expect: { timeout: 10000 },
   use: {
-    baseURL: 'http://localhost:5713',
+    baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     hasTouch: true, // 启用触摸事件支持
@@ -42,7 +42,7 @@ export default defineConfig({
     },
     {
       command: 'cd ../frontend && E2E_TEST=true npm run dev',
-      url: 'http://localhost:5713',
+      url: 'http://localhost:5173',
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
     },
