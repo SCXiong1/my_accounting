@@ -3,10 +3,11 @@ import { ref, computed } from 'vue'
 import { showSuccess, showTip } from '../lib/feedback'
 import { useTagStore } from '../stores/tag'
 
-const props = defineProps<{ modelValue: number[] }>()
+const props = defineProps<{ modelValue: number[]; filteredTags?: { id: number; name: string }[] }>()
 const emit = defineEmits<{ 'update:modelValue': [value: number[]] }>()
 
 const store = useTagStore()
+const displayTags = computed(() => props.filteredTags ?? store.list)
 const showDialog = ref(false)
 const newTagName = ref('')
 const adding = ref(false)
@@ -25,7 +26,7 @@ function toggleTag(id: number) {
 async function open() {
   newTagName.value = ''
   showDialog.value = true
-  if (store.list.length === 0) {
+  if (!props.filteredTags && store.list.length === 0) {
     try {
       await store.fetchList()
     } catch {
@@ -66,7 +67,7 @@ showSuccess('标签已添加')
 const selectedNames = computed(() => {
   if (props.modelValue.length === 0) return ''
   return props.modelValue
-    .map((id) => store.list.find((t) => t.id === id)?.name)
+    .map((id) => displayTags.value.find((t) => t.id === id)?.name ?? store.list.find((t) => t.id === id)?.name)
     .filter(Boolean)
     .join('、')
 })
@@ -106,12 +107,12 @@ const selectedNames = computed(() => {
 
       <!-- 已有标签列表 -->
       <div class="tag-popup__list">
-        <div v-if="store.list.length === 0" class="tag-popup__empty">
-          暂无标签，请先新增
+        <div v-if="displayTags.length === 0" class="tag-popup__empty">
+          {{ filteredTags ? '该分类下暂无标签' : '暂无标签，请先新增' }}
         </div>
         <van-checkbox-group :model-value="modelValue" data-testid="tag-checkbox__group">
           <van-cell
-            v-for="tag in store.list"
+            v-for="tag in displayTags"
             :key="tag.id"
             :title="tag.name"
             clickable

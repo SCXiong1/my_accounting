@@ -6,9 +6,11 @@ A lightweight, mobile-first personal expense tracking web app. Track spending, c
 
 - **Quick expense logging** — amount, category, tags, notes, and timestamp
 - **Custom categories & tags** — 8 preset categories on signup, fully customizable
+- **Category-tag linkage** — tags auto-filter by selected category based on historical records
 - **Smart search** — keyword search across notes, amounts, categories, and tags
 - **Multi-dimensional statistics** — pie charts (by category/tag), bar charts (monthly trends), with flexible time range filtering
-- **Trash & restore** — soft delete with one-click recovery
+- **Time-based filtering** — expense list supports month/quarter/year/custom time range
+- **Trash & restore** — soft delete with one-click recovery, batch permanent delete
 - **PWA support** — add to home screen, standalone display
 - **Multi-user** — isolated accounts with JWT authentication
 
@@ -106,7 +108,7 @@ e2e/
   global-setup.ts       # Test data seeding + auth state
   fixtures/             # Custom test fixtures
   helpers/              # Gesture helpers, API client
-  tests/                # 7 spec files: S1 auth, S2 expense CRUD, S3 form interactions, S4 statistics, S5 pull-refresh & tabbar, S6 category manage, S7 tag manage
+  tests/                # 12 spec files: S1 auth, S2 expense CRUD, S3 form interactions, S4 statistics, S5 pull-refresh & tabbar, S6 category manage, S7 tag manage, S8 navigation stability, S9 form optimization, S10 category-tag linkage, S11 list filter, S12 trash batch delete
 ```
 
 ## Configuration

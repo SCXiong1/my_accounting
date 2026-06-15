@@ -101,7 +101,7 @@ async function globalSetup(config: FullConfig) {
   // 4. 创建 5 条样本账单（金额为分）
   const now = Math.floor(Date.now() / 1000);
   const expenseData = [
-    { amount: 3500, note: '午餐', category_id: catMap['餐饮'], tag_ids: [tags[0].id], days_ago: 0 },
+    { amount: 3500, note: '午餐', category_id: catMap['餐饮'], tag_ids: [tags[0].id, tags[1].id], days_ago: 0 },
     { amount: 15000, note: '打车', category_id: catMap['交通'], tag_ids: [tags[1].id], days_ago: 0 },
     { amount: 29900, note: '买衣服', category_id: catMap['购物'], tag_ids: [tags[2].id], days_ago: 1 },
     { amount: 8800, note: '电影票', category_id: catMap['娱乐'], tag_ids: [tags[3].id], days_ago: 2 },

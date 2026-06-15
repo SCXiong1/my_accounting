@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { useCategoryStore } from '../stores/category'
 
 const props = defineProps<{ modelValue: number | null }>()
-const emit = defineEmits<{ 'update:modelValue': [value: number] }>()
+const emit = defineEmits<{ 'update:modelValue': [value: number]; change: [value: number | null] }>()
 
 const store = useCategoryStore()
 const showPicker = ref(false)
@@ -26,6 +26,7 @@ function onSelect(id: number) {
   const cat = store.list.find((c) => c.id === id)
   if (cat) {
     emit('update:modelValue', id)
+    emit('change', id)
   }
   showPicker.value = false
 }

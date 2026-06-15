@@ -3,7 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from middleware.jwt_auth import get_current_uid
 from schemas.tag import TagCreate, TagUpdate, TagSortRequest, TagResponse
+from schemas.category import CategoryResponse
 from services import tag_service
+from services import category_service
 
 router = APIRouter(prefix="/api/v1/tags", tags=["标签"])
 
@@ -48,3 +50,12 @@ async def sort_tags(
     db: AsyncSession = Depends(get_db),
 ):
     return await tag_service.sort_tags(db, uid, req)
+
+
+@router.get("/{tag_id}/categories", response_model=list[CategoryResponse])
+async def get_categories_by_tag(
+    tag_id: int,
+    uid: int = Depends(get_current_uid),
+    db: AsyncSession = Depends(get_db),
+):
+    return await category_service.get_categories_by_tag(db, uid, tag_id)

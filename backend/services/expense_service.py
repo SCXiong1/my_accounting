@@ -323,6 +323,38 @@ async def delete_expense(db: AsyncSession, uid: int, expense_id: int) -> dict:
     return {"deleted": True}
 
 
+async def permanent_delete_expenses(db: AsyncSession, uid: int, expense_ids: list[int]) -> int:
+    """批量永久删除支出记录（已软删除的），返回实际删除数量"""
+    result = await db.execute(
+        select(Expense.id).where(
+            Expense.id.in_(expense_ids),
+            Expense.uid == uid,
+            Expense.deleted == 1,
+        )
+    )
+    valid_ids = [row[0] for row in result.all()]
+    if not valid_ids:
+        return 0
+
+    # 硬删除关联的 tag index（先删子表，避免 FK 约束）
+    from sqlalchemy import delete as sql_delete
+    await db.execute(
+        sql_delete(ExpenseTagIndex).where(
+            ExpenseTagIndex.expense_id.in_(valid_ids),
+            ExpenseTagIndex.uid == uid,
+        )
+    )
+
+    # 硬删除支出记录
+    for eid in valid_ids:
+        expense = await db.get(Expense, eid)
+        if expense:
+            await db.delete(expense)
+
+    await db.commit()
+    return len(valid_ids)
+
+
 def _build_response(expense: Expense) -> ExpenseResponse:
     return ExpenseResponse(
         id=expense.id,

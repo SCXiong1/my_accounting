@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from middleware.jwt_auth import get_current_uid
-from schemas.expense import ExpenseCreate, ExpenseUpdate
+from schemas.expense import ExpenseCreate, ExpenseUpdate, BatchDeleteRequest
 from services import expense_service
 
 router = APIRouter(prefix="/api/v1/expenses", tags=["支出"])
@@ -28,6 +28,16 @@ async def list_expenses(
         category_id=category_id, tag_id=tag_id, keyword=keyword,
         sort_by=sort_by, show_deleted=bool(deleted),
     )
+
+
+@router.post("/batch-delete")
+async def batch_delete_expenses(
+    req: BatchDeleteRequest,
+    uid: int = Depends(get_current_uid),
+    db: AsyncSession = Depends(get_db),
+):
+    deleted_count = await expense_service.permanent_delete_expenses(db, uid, req.ids)
+    return {"deleted_count": deleted_count}
 
 
 @router.get("/{expense_id}")

@@ -46,3 +46,7 @@ class ExpenseListResponse(BaseModel):
     items: list[ExpenseResponse]
     next_cursor: int | None = None
     total: int = 0
+
+
+class BatchDeleteRequest(BaseModel):
+    ids: list[int] = Field(min_length=1)

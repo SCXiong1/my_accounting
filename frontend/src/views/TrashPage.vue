@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { showConfirmDialog } from 'vant'
 import { useExpenseStore } from '../stores/expense'
 import { showSuccess, showError, withMutate } from '../lib/feedback'
@@ -8,6 +8,38 @@ import ExpenseCard from '../components/ExpenseCard.vue'
 
 const store = useExpenseStore()
 const restoring = ref<number | null>(null)
+
+// 批量选择
+const selectMode = ref(false)
+const selectedIds = ref<number[]>([])
+
+const allSelected = computed(() =>
+  store.deletedItems.length > 0 && selectedIds.value.length === store.deletedItems.length
+)
+
+function toggleSelectMode() {
+  selectMode.value = !selectMode.value
+  if (!selectMode.value) {
+    selectedIds.value = []
+  }
+}
+
+function toggleSelect(id: number) {
+  const idx = selectedIds.value.indexOf(id)
+  if (idx > -1) {
+    selectedIds.value.splice(idx, 1)
+  } else {
+    selectedIds.value.push(id)
+  }
+}
+
+function toggleSelectAll() {
+  if (allSelected.value) {
+    selectedIds.value = []
+  } else {
+    selectedIds.value = store.deletedItems.map(e => e.id)
+  }
+}
 
 onMounted(() => {
   loadDeleted()
@@ -34,23 +66,37 @@ async function handleRestore(id: number) {
   restoring.value = null
 }
 
-async function handlePermanentDelete(id: number) {
+async function handleBatchDelete() {
+  if (selectedIds.value.length === 0) return
   try {
     await showConfirmDialog({
       title: '永久删除',
-      message: '此操作不可撤销，确定要永久删除吗？',
+      message: `确定永久删除 ${selectedIds.value.length} 条记录吗？此操作不可撤销。`,
     })
   } catch {
     return
   }
-  // 暂不支持永久删除，提醒用户
-  showSuccess('暂不支持永久删除，恢复后重新删除即可')
+  await withMutate(
+    async () => {
+      await store.batchPermanentDelete(selectedIds.value)
+      selectedIds.value = []
+      selectMode.value = false
+    },
+    '已删除',
+    '删除失败',
+  )
 }
 </script>
 
 <template>
   <div class="page-container">
-    <van-nav-bar title="回收站" left-text="返回" left-arrow @click-left="$router.back()" />
+    <van-nav-bar title="回收站" left-text="返回" left-arrow @click-left="$router.back()">
+      <template #right>
+        <van-button size="small" type="primary" plain @click="toggleSelectMode" data-testid="trash-select-mode">
+          {{ selectMode ? '取消' : '批量删除' }}
+        </van-button>
+      </template>
+    </van-nav-bar>
 
     <div v-if="store.deletedItems.length === 0 && !store.deletedLoading" class="empty-placeholder">
       <div class="trash-empty-icon">🗑️</div>
@@ -59,8 +105,16 @@ async function handlePermanentDelete(id: number) {
     </div>
 
     <div v-for="expense in store.deletedItems" :key="expense.id" class="trash-item">
+      <van-checkbox
+        v-if="selectMode"
+        :model-value="selectedIds.includes(expense.id)"
+        class="trash-item__checkbox"
+        data-testid="trash-checkbox"
+        @click="toggleSelect(expense.id)"
+      />
       <ExpenseCard :expense="expense" class="trash-item__card" />
       <van-button
+        v-if="!selectMode"
         size="small"
         type="primary"
         :loading="restoring === expense.id"
@@ -68,6 +122,22 @@ async function handlePermanentDelete(id: number) {
         class="trash-item__restore"
       >
         恢复
+      </van-button>
+    </div>
+
+    <!-- 底部批量操作栏 -->
+    <div v-if="selectMode" class="trash-batch-bar" data-testid="trash-batch-bar">
+      <van-checkbox :model-value="allSelected" @click="toggleSelectAll" data-testid="trash-select-all">
+        全选 ({{ selectedIds.length }}/{{ store.deletedItems.length }})
+      </van-checkbox>
+      <van-button
+        type="danger"
+        size="small"
+        :disabled="selectedIds.length === 0"
+        data-testid="trash-batch-delete"
+        @click="handleBatchDelete"
+      >
+        删除
       </van-button>
     </div>
   </div>
@@ -102,5 +172,24 @@ async function handlePermanentDelete(id: number) {
 .trash-item__restore {
   margin-right: var(--space-md);
   flex-shrink: 0;
+}
+
+.trash-item__checkbox {
+  margin-left: var(--space-md);
+  flex-shrink: 0;
+}
+
+.trash-batch-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  z-index: 100;
 }
 </style>

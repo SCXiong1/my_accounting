@@ -91,3 +91,23 @@ async def delete_tag(db: AsyncSession, uid: int, tag_id: int) -> dict:
 async def sort_tags(db: AsyncSession, uid: int, req: TagSortRequest) -> list[ExpenseTag]:
     orders = [{"id": item.id, "display_order": item.display_order} for item in req.orders]
     return await sort_models(db, uid, ExpenseTag, orders)
+
+
+async def get_tags_by_category(db: AsyncSession, uid: int, category_id: int) -> list[TagResponse]:
+    """查询某分类下历史使用过的标签"""
+    result = await db.execute(
+        select(ExpenseTag.id, ExpenseTag.name, ExpenseTag.display_order)
+        .join(ExpenseTagIndex, ExpenseTagIndex.tag_id == ExpenseTag.id)
+        .join(Expense, Expense.id == ExpenseTagIndex.expense_id)
+        .where(
+            Expense.uid == uid,
+            Expense.category_id == category_id,
+            Expense.deleted == 0,
+            ExpenseTagIndex.deleted == 0,
+            ExpenseTag.deleted == 0,
+        )
+        .distinct()
+        .order_by(ExpenseTag.display_order)
+    )
+    rows = result.all()
+    return [TagResponse(id=r.id, name=r.name, display_order=r.display_order) for r in rows]

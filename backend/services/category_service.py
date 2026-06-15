@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from models.expense_category import ExpenseCategory
 from models.expense import Expense
+from models.expense_tag_index import ExpenseTagIndex
 from middleware.error_handler import NotFoundException, BadRequestException
 from schemas.category import CategoryCreate, CategoryUpdate, CategorySortRequest, CategoryResponse
 from .catalog_core import find_or_404, soft_delete, sort_models, list_ordered, next_display_order
@@ -100,3 +101,32 @@ async def delete_category(db: AsyncSession, uid: int, category_id: int) -> dict:
 async def sort_categories(db: AsyncSession, uid: int, req: CategorySortRequest) -> list[ExpenseCategory]:
     orders = [{"id": item.id, "display_order": item.display_order} for item in req.orders]
     return await sort_models(db, uid, ExpenseCategory, orders)
+
+
+async def get_categories_by_tag(db: AsyncSession, uid: int, tag_id: int) -> list[CategoryResponse]:
+    """查询某标签下历史使用过的分类"""
+    result = await db.execute(
+        select(
+            ExpenseCategory.id,
+            ExpenseCategory.name,
+            ExpenseCategory.icon,
+            ExpenseCategory.color,
+            ExpenseCategory.display_order,
+        )
+        .join(Expense, Expense.category_id == ExpenseCategory.id)
+        .join(ExpenseTagIndex, ExpenseTagIndex.expense_id == Expense.id)
+        .where(
+            Expense.uid == uid,
+            ExpenseTagIndex.tag_id == tag_id,
+            Expense.deleted == 0,
+            ExpenseTagIndex.deleted == 0,
+            ExpenseCategory.deleted == 0,
+        )
+        .distinct()
+        .order_by(ExpenseCategory.display_order)
+    )
+    rows = result.all()
+    return [
+        CategoryResponse(id=r.id, name=r.name, icon=r.icon, color=r.color, display_order=r.display_order)
+        for r in rows
+    ]
