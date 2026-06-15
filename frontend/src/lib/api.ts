@@ -1,4 +1,4 @@
-import axios, { type AxiosRequestConfig } from 'axios'
+import axios from 'axios'
 import { getToken, removeToken } from './token'
 
 const api = axios.create({
@@ -57,23 +57,29 @@ export function buildQueryParams(obj: Record<string, unknown>): Record<string, s
 export function createCancellableRequest() {
   let abortController: AbortController | null = null
   let requestId = 0
+  const cancelledSet = new WeakSet<AbortController>()
 
   function cancel() {
     if (abortController) {
+      cancelledSet.add(abortController)
       abortController.abort()
       abortController = null
     }
   }
 
-  async function execute<T>(requestFn: (signal: AbortSignal) => Promise<T>): Promise<T> {
+  async function execute<T>(requestFn: (signal: AbortSignal) => Promise<T>): Promise<T | undefined> {
     cancel()
     const thisId = ++requestId
-    abortController = new AbortController()
+    const controller = new AbortController()
+    abortController = controller
     try {
-      return await requestFn(abortController.signal)
+      return await requestFn(controller.signal)
+    } catch (e: unknown) {
+      // Suppress errors from requests cancelled by a newer call.
+      // These are expected during rapid navigation/filter changes.
+      if (axios.isCancel(e) && cancelledSet.has(controller)) return undefined
+      throw e
     } finally {
-      // Only clean up if we are still the active request.
-      // An older request's finally must not clobber the new one.
       if (requestId === thisId) {
         abortController = null
       }

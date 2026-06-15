@@ -75,7 +75,7 @@ export const useExpenseStore = defineStore('expense', () => {
       })
 
       // Stale response — a newer fetch superseded us
-      if (mySeq !== fetchSeq) return data
+      if (mySeq !== fetchSeq) return undefined
 
       if (append) {
         items.value.push(...data.items)

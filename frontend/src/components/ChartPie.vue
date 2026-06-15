@@ -56,10 +56,7 @@ onMounted(async () => {
 })
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
-  if (chart) {
-    chart.dispose()
-    chart = null
-  }
+  chart = null
 })
 </script>
 
