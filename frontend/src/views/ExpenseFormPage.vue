@@ -37,14 +37,21 @@ const categoryError = ref('')
 
 // 分类标签联动
 const filteredTags = ref<{ id: number; name: string }[] | undefined>(undefined)
+let prevCategoryId: number | null = null
+let categoryChangeSeq = 0
 
 async function onCategoryChange(catId: number | null) {
+  if (catId === prevCategoryId) return
+  prevCategoryId = catId
   tagIds.value = []
   if (catId) {
+    const seq = ++categoryChangeSeq
     try {
       const res = await api.get(`/v1/categories/${catId}/tags`)
+      if (seq !== categoryChangeSeq) return
       filteredTags.value = res.data
     } catch {
+      if (seq !== categoryChangeSeq) return
       filteredTags.value = undefined
     }
   } else {
@@ -65,6 +72,7 @@ onMounted(async () => {
       const expense = await store.getOne(expenseId)
       amount.value = expense.amount
       categoryId.value = expense.category.id
+      prevCategoryId = expense.category.id
       tagIds.value = expense.tags.map((t) => t.id)
       transactionTime.value = expense.transaction_time
       note.value = expense.note

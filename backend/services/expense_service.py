@@ -346,10 +346,12 @@ async def permanent_delete_expenses(db: AsyncSession, uid: int, expense_ids: lis
     )
 
     # 硬删除支出记录
-    for eid in valid_ids:
-        expense = await db.get(Expense, eid)
-        if expense:
-            await db.delete(expense)
+    await db.execute(
+        sql_delete(Expense).where(
+            Expense.id.in_(valid_ids),
+            Expense.uid == uid,
+        )
+    )
 
     await db.commit()
     return len(valid_ids)

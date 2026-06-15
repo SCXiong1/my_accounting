@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { showSuccess, showTip } from '../lib/feedback'
+import { showSuccess, showError, showTip } from '../lib/feedback'
 import { useTagStore } from '../stores/tag'
 
 const props = defineProps<{ modelValue: number[]; filteredTags?: { id: number; name: string }[] }>()
@@ -55,10 +55,15 @@ showTip('已选中已有标签')
   adding.value = true
   try {
     const tag = await store.create(name)
-    // 自动选中新创建的标签
+    // 将新标签加入 filteredTags 显示列表
+    if (props.filteredTags && !props.filteredTags.some(t => t.id === tag.id)) {
+      props.filteredTags.push({ id: tag.id, name: tag.name })
+    }
     toggleTag(tag.id)
     newTagName.value = ''
 showSuccess('标签已添加')
+  } catch {
+showError('创建失败')
   } finally {
     adding.value = false
   }
