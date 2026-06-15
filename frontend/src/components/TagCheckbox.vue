@@ -22,12 +22,16 @@ function toggleTag(id: number) {
   emit('update:modelValue', tags)
 }
 
-function open() {
-  if (store.list.length === 0) {
-    store.fetchList()
-  }
+async function open() {
   newTagName.value = ''
   showDialog.value = true
+  if (store.list.length === 0) {
+    try {
+      await store.fetchList()
+    } catch {
+      // 加载失败时弹窗仍然打开，显示空列表
+    }
+  }
 }
 
 async function addNewTag() {

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import api, { buildQueryParams } from '../lib/api'
+import api, { buildQueryParams, createCancellableRequest } from '../lib/api'
 import type { Category } from './category'
 import type { Tag } from './tag'
 
@@ -38,28 +38,44 @@ export interface ExpenseFormData {
 }
 
 export const useExpenseStore = defineStore('expense', () => {
+  // Active expenses (used by HomePage, ExpenseListPage)
   const items = ref<ExpenseItem[]>([])
   const nextCursor = ref<number>()
   const total = ref(0)
   const loading = ref(false)
   const hasMore = ref(true)
 
+  // Deleted expenses (used by TrashPage) — separate array to avoid cross-page contamination
+  const deletedItems = ref<ExpenseItem[]>([])
+  const deletedTotal = ref(0)
+  const deletedLoading = ref(false)
+
+  // Request cancellation for list fetches
+  const listRequest = createCancellableRequest()
+  let fetchSeq = 0
+
   async function fetchList(params: ExpenseListParams = {}, append = false) {
+    const mySeq = ++fetchSeq
     loading.value = true
     try {
-      const query = buildQueryParams({
-        limit: params.limit,
-        cursor: params.cursor,
-        start_time: params.start_time,
-        end_time: params.end_time,
-        category_id: params.category_id,
-        tag_id: params.tag_id,
-        keyword: params.keyword,
-        sort_by: params.sort_by,
+      const data = await listRequest.execute(async (signal) => {
+        const query = buildQueryParams({
+          limit: params.limit,
+          cursor: params.cursor,
+          start_time: params.start_time,
+          end_time: params.end_time,
+          category_id: params.category_id,
+          tag_id: params.tag_id,
+          keyword: params.keyword,
+          sort_by: params.sort_by,
+        })
+
+        const res = await api.get('/v1/expenses', { params: query, signal })
+        return res.data
       })
 
-      const res = await api.get('/v1/expenses', { params: query })
-      const data = res.data
+      // Stale response — a newer fetch superseded us
+      if (mySeq !== fetchSeq) return data
 
       if (append) {
         items.value.push(...data.items)
@@ -71,7 +87,10 @@ export const useExpenseStore = defineStore('expense', () => {
       hasMore.value = data.next_cursor !== null
       return data
     } finally {
-      loading.value = false
+      // Only clear loading if we are the latest fetch
+      if (mySeq === fetchSeq) {
+        loading.value = false
+      }
     }
   }
 
@@ -104,22 +123,31 @@ export const useExpenseStore = defineStore('expense', () => {
   }
 
   async function fetchDeleted() {
-    loading.value = true
+    deletedLoading.value = true
     try {
       const res = await api.get('/v1/expenses', { params: { deleted: 1, limit: 100 } })
-      items.value = res.data.items
-      total.value = res.data.total
-      hasMore.value = false
+      deletedItems.value = res.data.items
+      deletedTotal.value = res.data.total
     } finally {
-      loading.value = false
+      deletedLoading.value = false
     }
+  }
+
+  function resetDeleted() {
+    deletedItems.value = []
+    deletedTotal.value = 0
   }
 
   async function restore(id: number) {
     await api.post(`/v1/expenses/${id}/restore`)
-    items.value = items.value.filter((e) => e.id !== id)
-    total.value--
+    deletedItems.value = deletedItems.value.filter((e) => e.id !== id)
+    deletedTotal.value--
   }
 
-  return { items, nextCursor, total, loading, hasMore, fetchList, resetList, getOne, create, updateExpense, remove, fetchDeleted, restore }
+  return {
+    items, nextCursor, total, loading, hasMore,
+    deletedItems, deletedTotal, deletedLoading,
+    fetchList, resetList, getOne, create, updateExpense, remove,
+    fetchDeleted, resetDeleted, restore,
+  }
 })

@@ -5,6 +5,12 @@ import { apiClient } from '../helpers/api-client';
 // 唯一后缀，避免多项目并行时数据冲突
 const uid = Date.now();
 
+function getCatId(metadata: ReturnType<typeof loadMetadata>, name: string): number {
+  const cat = metadata.categories.find(c => c.name === name);
+  if (!cat) throw new Error(`分类 "${name}" 不存在于 metadata 中`);
+  return cat.id;
+}
+
 testAuth.describe('S2: 账单 CRUD', () => {
   testAuth('新增账单：填金额 → 选分类 → 选标签 → 填备注 → 提交', async ({ page }) => {
     const metadata = loadMetadata();
@@ -51,7 +57,7 @@ testAuth.describe('S2: 账单 CRUD', () => {
     const now = Math.floor(Date.now() / 1000);
     const createRes = await api.post('/api/v1/expenses', {
       amount: 1000,
-      category_id: 1,
+      category_id: getCatId(metadata, '餐饮'),
       tag_ids: [metadata.tags[0].id],
       transaction_time: now,
       note,
@@ -83,7 +89,7 @@ testAuth.describe('S2: 账单 CRUD', () => {
     const now = Math.floor(Date.now() / 1000);
     const createRes = await api.post('/api/v1/expenses', {
       amount: 2000,
-      category_id: 1,
+      category_id: getCatId(metadata, '餐饮'),
       tag_ids: [metadata.tags[0].id],
       transaction_time: now,
       note,
@@ -117,7 +123,7 @@ testAuth.describe('S2: 账单 CRUD', () => {
     const now = Math.floor(Date.now() / 1000);
     const createRes = await api.post('/api/v1/expenses', {
       amount: 3000,
-      category_id: 1,
+      category_id: getCatId(metadata, '餐饮'),
       tag_ids: [metadata.tags[0].id],
       transaction_time: now,
       note,
@@ -149,7 +155,7 @@ testAuth.describe('S2: 账单 CRUD', () => {
     const now = Math.floor(Date.now() / 1000);
     const createRes = await api.post('/api/v1/expenses', {
       amount: 4000,
-      category_id: 1,
+      category_id: getCatId(metadata, '餐饮'),
       tag_ids: [metadata.tags[0].id],
       transaction_time: now,
       note,
@@ -198,7 +204,7 @@ testAuth.describe('S2: 账单 CRUD', () => {
     const now = Math.floor(Date.now() / 1000);
     const createRes = await api.post('/api/v1/expenses', {
       amount: 5000,
-      category_id: 1,
+      category_id: getCatId(metadata, '餐饮'),
       tag_ids: [metadata.tags[0].id],
       transaction_time: now,
       note,
@@ -230,7 +236,7 @@ testAuth.describe('S2: 账单 CRUD', () => {
     const now = Math.floor(Date.now() / 1000);
     const createRes = await api.post('/api/v1/expenses', {
       amount: 6000,
-      category_id: 1,
+      category_id: getCatId(metadata, '餐饮'),
       tag_ids: [metadata.tags[0].id],
       transaction_time: now,
       note,
@@ -264,7 +270,7 @@ testAuth.describe('S2: 账单 CRUD', () => {
     const now = Math.floor(Date.now() / 1000);
     const createRes = await api.post('/api/v1/expenses', {
       amount: 7000,
-      category_id: 1,
+      category_id: getCatId(metadata, '餐饮'),
       tag_ids: [metadata.tags[0].id],
       transaction_time: now,
       note,

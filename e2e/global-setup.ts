@@ -12,6 +12,11 @@ interface SeedUser {
   nickname: string;
 }
 
+interface SeedCategory {
+  id: number;
+  name: string;
+}
+
 interface SeedTag {
   id: number;
   name: string;
@@ -28,6 +33,7 @@ interface SeedExpense {
 interface TestMetadata {
   user: SeedUser;
   token: string;
+  categories: SeedCategory[];
   tags: SeedTag[];
   expenses: SeedExpense[];
 }
@@ -73,7 +79,13 @@ async function globalSetup(config: FullConfig) {
     Authorization: `Bearer ${token}`,
   };
 
-  // 2. 创建 4 个标签
+  // 2. 获取注册时自动创建的分类列表
+  const catRes = await fetch(`${apiBase}/api/v1/categories`, { headers: authHeaders });
+  if (!catRes.ok) throw new Error(`获取分类失败: ${catRes.status}`);
+  const categories = await catRes.json() as Array<{ id: number; name: string }>;
+  const catMap = Object.fromEntries(categories.map(c => [c.name, c.id]));
+
+  // 3. 创建 4 个标签
   const tagNames = ['餐饮', '交通', '购物', '娱乐'];
   const tags: SeedTag[] = [];
   for (const name of tagNames) {
@@ -86,14 +98,14 @@ async function globalSetup(config: FullConfig) {
     tags.push(await res.json());
   }
 
-  // 3. 创建 5 条样本账单（金额为分）
+  // 4. 创建 5 条样本账单（金额为分）
   const now = Math.floor(Date.now() / 1000);
   const expenseData = [
-    { amount: 3500, note: '午餐', category_id: 1, tag_ids: [tags[0].id], days_ago: 0 },
-    { amount: 15000, note: '打车', category_id: 2, tag_ids: [tags[1].id], days_ago: 0 },
-    { amount: 29900, note: '买衣服', category_id: 3, tag_ids: [tags[2].id], days_ago: 1 },
-    { amount: 8800, note: '电影票', category_id: 5, tag_ids: [tags[3].id], days_ago: 2 },
-    { amount: 5600, note: '外卖', category_id: 1, tag_ids: [tags[0].id], days_ago: 3 },
+    { amount: 3500, note: '午餐', category_id: catMap['餐饮'], tag_ids: [tags[0].id], days_ago: 0 },
+    { amount: 15000, note: '打车', category_id: catMap['交通'], tag_ids: [tags[1].id], days_ago: 0 },
+    { amount: 29900, note: '买衣服', category_id: catMap['购物'], tag_ids: [tags[2].id], days_ago: 1 },
+    { amount: 8800, note: '电影票', category_id: catMap['娱乐'], tag_ids: [tags[3].id], days_ago: 2 },
+    { amount: 5600, note: '外卖', category_id: catMap['餐饮'], tag_ids: [tags[0].id], days_ago: 3 },
   ];
 
   const expenses: SeedExpense[] = [];
@@ -129,8 +141,8 @@ async function globalSetup(config: FullConfig) {
   };
   fs.writeFileSync(storageStatePath, JSON.stringify(storageState, null, 2));
 
-  // 5. 导出测试元数据
-  const metadata: TestMetadata = { user, token, tags, expenses };
+  // 6. 导出测试元数据
+  const metadata: TestMetadata = { user, token, categories, tags, expenses };
   fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
 
   console.log(`[global-setup] 用户: ${user.username}, 标签: ${tags.length}, 账单: ${expenses.length}`);

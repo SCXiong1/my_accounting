@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { showConfirmDialog } from 'vant'
-import api from '../lib/api'
 import { useExpenseStore } from '../stores/expense'
 import { showSuccess, showError, withMutate } from '../lib/feedback'
 import { getErrorMessage } from '../lib/error'
@@ -15,7 +14,7 @@ onMounted(() => {
 })
 
 async function loadDeleted() {
-  store.resetList()
+  store.resetDeleted()
   try {
     await store.fetchDeleted()
   } catch (e: unknown) {
@@ -27,8 +26,7 @@ async function handleRestore(id: number) {
   restoring.value = id
   await withMutate(
     async () => {
-      await api.post(`/v1/expenses/${id}/restore`)
-      loadDeleted()
+      await store.restore(id)
     },
     '已恢复',
     '恢复失败',
@@ -54,13 +52,13 @@ async function handlePermanentDelete(id: number) {
   <div class="page-container">
     <van-nav-bar title="回收站" left-text="返回" left-arrow @click-left="$router.back()" />
 
-    <div v-if="store.items.length === 0 && !store.loading" class="empty-placeholder">
+    <div v-if="store.deletedItems.length === 0 && !store.deletedLoading" class="empty-placeholder">
       <div class="trash-empty-icon">🗑️</div>
       <div class="trash-empty-text">回收站是空的</div>
       <div class="trash-empty-hint">删除的支出会保留在这里，可以恢复</div>
     </div>
 
-    <div v-for="expense in store.items" :key="expense.id" class="trash-item">
+    <div v-for="expense in store.deletedItems" :key="expense.id" class="trash-item">
       <ExpenseCard :expense="expense" class="trash-item__card" />
       <van-button
         size="small"
