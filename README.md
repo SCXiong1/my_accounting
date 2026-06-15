@@ -1,41 +1,47 @@
 # EzExpense
 
-A lightweight, mobile-first personal expense tracking web app. Track spending, categorize transactions, and visualize financial habits — all from your phone browser.
+轻量级移动端个人记账 Web 应用。手机浏览器即可记录支出、分类管理、标签筛选、统计分析。
 
-## Features
+## 功能特性
 
-- **Quick expense logging** — amount, category, tags, notes, and timestamp
-- **Custom categories & tags** — 8 preset categories on signup, fully customizable
-- **Category-tag linkage** — tags auto-filter by selected category based on historical records
-- **Smart search** — keyword search across notes, amounts, categories, and tags
-- **Multi-dimensional statistics** — pie charts (by category/tag), bar charts (monthly trends), with flexible time range filtering
-- **Time-based filtering** — expense list supports month/quarter/year/custom time range
-- **Trash & restore** — soft delete with one-click recovery, batch permanent delete
-- **PWA support** — add to home screen, standalone display
-- **Multi-user** — isolated accounts with JWT authentication
+- 快速记账 — 金额、分类、标签、备注、时间，一键提交
+- 分类标签联动 — 选择分类后自动过滤历史关联标签，筛选更精准
+- 自定义分类与标签 — 注册即预设 8 个常用分类，支持增删改和拖拽排序
+- 关键词搜索 — 按备注、金额、分类、标签全文检索
+- 多维统计 — 按分类/标签饼图、按月趋势柱状图，支持灵活时间范围筛选
+- 时间筛选 — 支出记录页支持本月/近3月/近6月/今年/自定义时间范围
+- 回收站 — 软删除一键恢复，支持批量选择永久删除
+- PWA — 添加到手机主屏幕，独立窗口显示
+- 多用户 — JWT 认证，数据按用户隔离
 
-## Tech Stack
+## 技术栈
 
-| Layer | Stack |
-|-------|-------|
-| Backend | Python 3.11+ / FastAPI / SQLAlchemy 2.0 (async) / SQLite / Alembic |
-| Frontend | Vue 3 / TypeScript / Vite 8 / Vant 4 / Pinia / ECharts 6 |
-| Auth | JWT (HS256) + bcrypt |
-| Deploy | Docker multi-stage build |
+| 层 | 技术 |
+|---|------|
+| 后端 | Python 3.12 / FastAPI / SQLAlchemy 2.0 (async) / SQLite / Alembic |
+| 前端 | Vue 3 / TypeScript / Vite / Vant 4 / Pinia / ECharts |
+| 认证 | JWT (HS256) + bcrypt |
+| 部署 | Docker 多阶段构建 / GHCR |
 
-## Quick Start
+## 快速开始
 
-### Docker (recommended)
+### Docker 部署（推荐）
 
 ```bash
-docker compose up --build
+docker compose up -d
 ```
 
-Open `http://localhost:8080` on your phone.
+手机浏览器访问 `http://<服务器IP>:8080`。
 
-### Manual
+### 拉取镜像
 
-**Backend:**
+```bash
+docker pull ghcr.io/scxiong1/my_accounting:2.0.0
+```
+
+### 本地开发
+
+**后端：**
 
 ```bash
 cd backend
@@ -44,7 +50,7 @@ uv pip install -r requirements.txt
 .venv/bin/python main.py
 ```
 
-**Frontend:**
+**前端：**
 
 ```bash
 cd frontend
@@ -52,85 +58,85 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:5173` (dev) or `http://localhost:8080` (production).
+开发环境访问 `http://localhost:5173`，生产构建访问 `http://localhost:8080`。
 
-## Development
-
-### Run tests
-
-```bash
-# Backend unit tests
-cd backend
-.venv/bin/python -m pytest test_catalog_core.py test_soft_delete.py test_statistics.py -v
-
-# Backend integration tests (requires running server)
-.venv/bin/python -m pytest test_api.py -v
-
-# Frontend tests
-cd frontend
-npx vitest
-
-# E2E tests (requires Playwright browsers installed once)
-cd e2e
-npm install
-npx playwright install --with-deps chromium webkit  # first time only
-npm test
-```
-
-### Database migrations
-
-```bash
-cd backend
-.venv/bin/python -m alembic upgrade head          # apply migrations
-.venv/bin/python -m alembic revision --autogenerate -m "desc"  # create migration
-```
-
-## Project Structure
+## 项目结构
 
 ```
 backend/
-  api/           # FastAPI route handlers
-  services/      # Business logic
-  models/        # SQLAlchemy ORM models
-  schemas/       # Pydantic request/response models
-  middleware/    # JWT auth + error handling
+  api/                # FastAPI 路由处理
+  services/           # 业务逻辑
+  models/             # SQLAlchemy ORM 模型
+  schemas/            # Pydantic 请求/响应模型
+  middleware/          # JWT 认证 + 全局异常处理
 frontend/
   src/
-    views/       # Page components
-    stores/      # Pinia state management
-    components/  # Shared UI components
-    composables/ # Vue composables (charts, filters)
-    lib/         # HTTP client, token, notifications
-    core/        # Pure utility functions (format, time)
-    styles/      # Design tokens (tokens.css) + global CSS overrides (global.css)
+    views/            # 页面组件
+    stores/           # Pinia 状态管理
+    components/       # 共享 UI 组件
+    composables/      # Vue 组合式函数（图表、筛选）
+    lib/              # HTTP 客户端、Token 管理、消息通知
+    core/             # 纯工具函数（格式化、时间）
+    styles/           # 设计令牌 (tokens.css) + 全局样式覆盖 (global.css)
 e2e/
-  playwright.config.ts  # Playwright config (webServer, devices, projects)
-  global-setup.ts       # Test data seeding + auth state
-  fixtures/             # Custom test fixtures
-  helpers/              # Gesture helpers, API client
-  tests/                # 12 spec files: S1 auth, S2 expense CRUD, S3 form interactions, S4 statistics, S5 pull-refresh & tabbar, S6 category manage, S7 tag manage, S8 navigation stability, S9 form optimization, S10 category-tag linkage, S11 list filter, S12 trash batch delete
+  tests/              # 12 个 E2E 测试：S1 认证、S2 支出 CRUD、S3 表单交互、S4 统计、S5 下拉刷新、S6 分类管理、S7 标签管理、S8 导航稳定性、S9 表单优化、S10 分类标签联动、S11 列表筛选、S12 回收站批量删除
 ```
 
-## Configuration
+## 开发指南
 
-Backend config via `backend/config.yaml`, overridable with environment variables:
+### 运行测试
 
 ```bash
-APP_SERVER_PORT=9090
-APP_DATABASE_PATH=/data/my_expense.db
-APP_SECURITY_JWT_SECRET=your-secret-key
+# 后端单元测试
+cd backend
+.venv/bin/python -m pytest test_catalog_core.py test_soft_delete.py test_statistics.py -v
+
+# 后端集成测试（需要启动服务器）
+.venv/bin/python -m pytest test_api.py test_linkage.py test_batch_delete.py -v
+
+# 前端测试
+cd frontend
+npx vitest
+
+# E2E 测试（首次需要安装浏览器）
+cd e2e
+npm ci
+npx playwright install --with-deps chromium webkit
+npm test
 ```
 
-## Deployment
-
-Production builds serve the frontend from FastAPI. CI auto-publishes Docker images to GHCR on version tags (`v*`).
+### 数据库迁移
 
 ```bash
-# Build and push
-git tag v1.0.0
-git push origin v1.0.0
+cd backend
+.venv/bin/python -m alembic upgrade head                    # 执行迁移
+.venv/bin/python -m alembic revision --autogenerate -m "描述"  # 创建迁移
 ```
 
-## License
+## 配置
 
-Private project.
+后端配置文件 `backend/config.yaml`，支持环境变量覆盖：
+
+| 环境变量 | 说明 | 默认值 |
+|---------|------|--------|
+| `APP_SERVER_PORT` | 服务端口 | `8080` |
+| `APP_DATABASE_PATH` | 数据库路径 | `./data/ezexpense.db` |
+| `APP_SECURITY_JWT_SECRET` | JWT 签名密钥 | 配置文件中的值 |
+
+## 部署
+
+生产构建由 FastAPI 直接托管前端静态文件。CI 在推送 `v*` 标签时自动构建并发布 Docker 镜像到 GHCR。
+
+```bash
+git tag v2.0.0
+git push origin v2.0.0
+```
+
+镜像标签说明：
+- `2.0.0` — 精确版本，推荐生产使用
+- `2.0` — 次级版本，跟随补丁更新
+- `latest` — 始终指向最新版本
+
+## 许可证
+
+私有项目。
