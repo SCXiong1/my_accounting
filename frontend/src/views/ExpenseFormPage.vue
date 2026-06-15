@@ -6,6 +6,7 @@ import { useExpenseStore } from '../stores/expense'
 import { useCategoryStore } from '../stores/category'
 import { useTagStore } from '../stores/tag'
 import { formatDate } from '../core/time'
+import api from '../lib/api'
 import AmountField from '../components/AmountField.vue'
 import CategoryPicker from '../components/CategoryPicker.vue'
 import TagCheckbox from '../components/TagCheckbox.vue'
@@ -34,6 +35,30 @@ const dateDisplay = computed(() => formatDate(transactionTime.value))
 const amountError = ref('')
 const categoryError = ref('')
 
+// 分类标签联动
+const filteredTags = ref<{ id: number; name: string }[] | undefined>(undefined)
+let prevCategoryId: number | null = null
+let categoryChangeSeq = 0
+
+async function onCategoryChange(catId: number | null) {
+  if (catId === prevCategoryId) return
+  prevCategoryId = catId
+  tagIds.value = []
+  if (catId) {
+    const seq = ++categoryChangeSeq
+    try {
+      const res = await api.get(`/v1/categories/${catId}/tags`)
+      if (seq !== categoryChangeSeq) return
+      filteredTags.value = res.data
+    } catch {
+      if (seq !== categoryChangeSeq) return
+      filteredTags.value = undefined
+    }
+  } else {
+    filteredTags.value = undefined
+  }
+}
+
 function datePickerValue() {
   const d = new Date(transactionTime.value * 1000)
   return [String(d.getFullYear()), String(d.getMonth() + 1), String(d.getDate())]
@@ -47,9 +72,24 @@ onMounted(async () => {
       const expense = await store.getOne(expenseId)
       amount.value = expense.amount
       categoryId.value = expense.category.id
+      prevCategoryId = expense.category.id
       tagIds.value = expense.tags.map((t) => t.id)
       transactionTime.value = expense.transaction_time
       note.value = expense.note
+      // 编辑模式下加载该分类的标签，并保留已选标签
+      try {
+        const res = await api.get(`/v1/categories/${expense.category.id}/tags`)
+        const catTags: { id: number; name: string }[] = res.data
+        const existingIds = new Set(catTags.map(t => t.id))
+        for (const t of expense.tags) {
+          if (!existingIds.has(t.id)) {
+            catTags.push({ id: t.id, name: t.name })
+          }
+        }
+        filteredTags.value = catTags
+      } catch {
+        // 失败时不限制标签列表
+      }
     } finally {
       loading.value = false
     }
@@ -118,11 +158,10 @@ async function handleSubmit() {
     <van-loading v-if="loading" class="form-loading" />
 
     <div v-else class="form-body">
-      <AmountField v-model="amount" />
-      <div v-if="amountError" class="form-error">{{ amountError }}</div>
-
-      <CategoryPicker v-model="categoryId" />
+      <CategoryPicker v-model="categoryId" @change="onCategoryChange" />
       <div v-if="categoryError" class="form-error">{{ categoryError }}</div>
+
+      <TagCheckbox v-model="tagIds" :filtered-tags="filteredTags" />
 
       <van-field
         :model-value="dateDisplay"
@@ -132,8 +171,6 @@ async function handleSubmit() {
         data-testid="expense-form-date"
         @click="showDatetimePicker = true"
       />
-
-      <TagCheckbox v-model="tagIds" />
 
       <van-field
         v-model="note"
@@ -145,6 +182,9 @@ async function handleSubmit() {
         show-word-limit
         data-testid="expense-form-note"
       />
+
+      <AmountField v-model="amount" />
+      <div v-if="amountError" class="form-error">{{ amountError }}</div>
 
       <div class="form-submit">
         <van-button

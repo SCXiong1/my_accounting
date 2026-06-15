@@ -7,6 +7,7 @@ import { showError, withMutate } from '../lib/feedback'
 import { useExpenseStore } from '../stores/expense'
 import { useCategoryStore } from '../stores/category'
 import { useTagStore } from '../stores/tag'
+import { usePeriodFilter } from '../composables/usePeriodFilter'
 import ExpenseCard from '../components/ExpenseCard.vue'
 import FilterPicker from '../components/FilterPicker.vue'
 
@@ -15,6 +16,12 @@ const route = useRoute()
 const store = useExpenseStore()
 const catStore = useCategoryStore()
 const tagStore = useTagStore()
+
+const {
+  activePeriod, periods, timeRange,
+  showCustomPopup, pickStep, pickerValue,
+  selectPeriod, openCustom, onPickerConfirm, onCancelCustom,
+} = usePeriodFilter()
 
 // 筛选条件
 const filterCategoryId = ref<number>()
@@ -28,6 +35,17 @@ const showTagFilter = ref(false)
 const INITIAL_LIMIT = 15
 const PAGE_LIMIT = 10
 
+function filterParams() {
+  return {
+    start_time: timeRange.value.start_time,
+    end_time: timeRange.value.end_time,
+    category_id: filterCategoryId.value,
+    tag_id: filterTagId.value,
+    keyword: filterKeyword.value || undefined,
+    sort_by: sortBy.value,
+  }
+}
+
 // 下拉刷新
 const refreshing = ref(false)
 
@@ -40,12 +58,7 @@ function syncQueryFilters() {
 onMounted(async () => {
   syncQueryFilters()
   await Promise.all([
-    store.fetchList({
-      limit: INITIAL_LIMIT,
-      sort_by: 'time',
-      category_id: filterCategoryId.value,
-      tag_id: filterTagId.value,
-    }),
+    store.fetchList({ ...filterParams(), limit: INITIAL_LIMIT }),
     catStore.fetchList(),
     tagStore.fetchList(),
   ])
@@ -56,17 +69,14 @@ watch(() => route.query, () => {
   applyFilter()
 })
 
+watch(timeRange, () => {
+  applyFilter()
+})
+
 async function loadMore() {
   if (!store.hasMore) return
   try {
-    await store.fetchList({
-      cursor: store.nextCursor,
-      limit: PAGE_LIMIT,
-      category_id: filterCategoryId.value,
-      tag_id: filterTagId.value,
-      keyword: filterKeyword.value || undefined,
-      sort_by: sortBy.value,
-    }, true)
+    await store.fetchList({ ...filterParams(), cursor: store.nextCursor, limit: PAGE_LIMIT }, true)
   } catch (e: unknown) {
     showError(getErrorMessage(e, '加载失败'))
   }
@@ -76,13 +86,7 @@ async function onRefresh() {
   refreshing.value = true
   try {
     store.resetList()
-    await store.fetchList({
-      limit: INITIAL_LIMIT,
-      category_id: filterCategoryId.value,
-      tag_id: filterTagId.value,
-      keyword: filterKeyword.value || undefined,
-      sort_by: sortBy.value,
-    })
+    await store.fetchList({ ...filterParams(), limit: INITIAL_LIMIT })
   } catch (e: unknown) {
     showError(getErrorMessage(e, '刷新失败'))
   } finally {
@@ -93,13 +97,7 @@ async function onRefresh() {
 async function applyFilter() {
   store.resetList()
   try {
-    await store.fetchList({
-      limit: INITIAL_LIMIT,
-      category_id: filterCategoryId.value,
-      tag_id: filterTagId.value,
-      keyword: filterKeyword.value || undefined,
-      sort_by: sortBy.value,
-    })
+    await store.fetchList({ ...filterParams(), limit: INITIAL_LIMIT })
   } catch (e: unknown) {
     showError(getErrorMessage(e, '加载失败'))
   }
@@ -193,6 +191,26 @@ async function handleDelete(id: number) {
       />
     </div>
 
+    <!-- 时间筛选 -->
+    <div class="filter-bar">
+      <van-button
+        v-for="p in periods" :key="p.key"
+        :type="activePeriod === p.key ? 'primary' : 'default'"
+        size="small" round
+        data-testid="expense-period-btn"
+        @click="selectPeriod(p.key)"
+      >
+        {{ p.label }}
+      </van-button>
+      <van-button
+        :type="activePeriod === 'custom' ? 'primary' : 'default'"
+        size="small" round
+        @click="openCustom"
+      >
+        自定义
+      </van-button>
+    </div>
+
     <!-- 筛选栏 -->
     <div class="filter-bar">
       <van-tag
@@ -276,6 +294,22 @@ async function handleDelete(id: number) {
 
     <!-- 标签筛选 -->
     <FilterPicker v-model:show="showTagFilter" :columns="tagColumns" @select="onTagSelect" />
+
+    <!-- 自定义时间选择器 -->
+    <van-popup v-model:show="showCustomPopup" position="bottom" round>
+      <div class="custom-popup">
+        <div class="custom-popup__title">
+          {{ pickStep === 'start' ? '选择开始月份' : '选择结束月份' }}
+        </div>
+        <van-date-picker
+          :key="pickStep"
+          v-model="pickerValue"
+          :columns-type="['year', 'month']"
+          @confirm="onPickerConfirm"
+          @cancel="onCancelCustom"
+        />
+      </div>
+    </van-popup>
   </div>
 </template>
 
@@ -312,5 +346,15 @@ async function handleDelete(id: number) {
   position: fixed;
   right: var(--space-lg);
   bottom: 70px;
+}
+
+.custom-popup {
+  padding: var(--space-lg);
+}
+
+.custom-popup__title {
+  text-align: center;
+  margin-bottom: var(--space-md);
+  font-weight: 500;
 }
 </style>

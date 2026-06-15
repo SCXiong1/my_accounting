@@ -144,10 +144,17 @@ export const useExpenseStore = defineStore('expense', () => {
     deletedTotal.value--
   }
 
+  async function batchPermanentDelete(ids: number[]) {
+    const res = await api.post('/v1/expenses/batch-delete', { ids })
+    const deletedCount = res.data.deleted_count ?? ids.length
+    deletedItems.value = deletedItems.value.filter((e) => !ids.includes(e.id))
+    deletedTotal.value = Math.max(0, deletedTotal.value - deletedCount)
+  }
+
   return {
     items, nextCursor, total, loading, hasMore,
     deletedItems, deletedTotal, deletedLoading,
     fetchList, resetList, getOne, create, updateExpense, remove,
-    fetchDeleted, resetDeleted, restore,
+    fetchDeleted, resetDeleted, restore, batchPermanentDelete,
   }
 })
