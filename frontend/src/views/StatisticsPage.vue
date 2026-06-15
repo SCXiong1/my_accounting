@@ -234,10 +234,8 @@ onUnmounted(() => {
           v-model="pickerValue"
           :columns-type="['year', 'month']"
           @confirm="onPickerConfirm"
+          @cancel="onCancelCustom"
         />
-        <div class="custom-popup__actions">
-          <van-button round block @click="onCancelCustom">取消</van-button>
-        </div>
       </div>
     </van-popup>
   </div>
@@ -251,11 +249,14 @@ onUnmounted(() => {
 .stats-overview-card {
   margin: 0;
   width: 100%;
-  padding: var(--space-md) var(--space-sm);
+  padding: var(--space-md) var(--space-xs);
 }
 
 .stats-overview-amount {
-  font-size: var(--font-size-amount-sm);
+  font-size: 14px;
+  font-weight: 600;
+  word-break: break-all;
+  line-height: 1.2;
 }
 
 .stats-detail-link {

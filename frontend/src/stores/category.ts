@@ -14,10 +14,16 @@ export interface Category {
 
 export const useCategoryStore = defineStore('category', () => {
   const list = ref<Category[]>([])
+  const loading = ref(false)
 
   async function fetchList() {
-    const res = await api.get('/v1/categories')
-    list.value = res.data
+    loading.value = true
+    try {
+      const res = await api.get('/v1/categories')
+      list.value = res.data
+    } finally {
+      loading.value = false
+    }
   }
 
   async function create(data: { name: string; icon?: string; color?: string }) {
@@ -42,5 +48,5 @@ export const useCategoryStore = defineStore('category', () => {
     await fetchList()
   }
 
-  return { list, fetchList, create, update, remove, sort }
+  return { list, loading, fetchList, create, update, remove, sort }
 })

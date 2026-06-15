@@ -9,6 +9,7 @@ const __dirname = path.dirname(__filename);
 export interface TestMetadata {
   user: { id: number; username: string; nickname: string };
   token: string;
+  categories: { id: number; name: string }[];
   tags: { id: number; name: string }[];
   expenses: { id: number; amount: number; note: string; category_id: number; tag_ids: number[] }[];
 }

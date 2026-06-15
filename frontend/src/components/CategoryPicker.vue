@@ -30,11 +30,15 @@ function onSelect(id: number) {
   showPicker.value = false
 }
 
-function open() {
-  if (store.list.length === 0) {
-    store.fetchList()
-  }
+async function open() {
   showPicker.value = true
+  if (store.list.length === 0) {
+    try {
+      await store.fetchList()
+    } catch {
+      // 加载失败时弹窗仍然打开，显示空列表
+    }
+  }
 }
 </script>
 

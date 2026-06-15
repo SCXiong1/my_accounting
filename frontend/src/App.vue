@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { watch } from 'vue'
+import { watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { computed } from 'vue'
 import { useAuthStore } from './stores/auth'
+import { setUnauthorizedHandler } from './lib/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -15,6 +16,13 @@ const showTabbar = computed(() => {
 
 watch(() => auth.token, (val) => {
   if (!val) router.push('/login')
+})
+
+onMounted(() => {
+  setUnauthorizedHandler(() => {
+    auth.logout()
+    router.push('/login')
+  })
 })
 </script>
 

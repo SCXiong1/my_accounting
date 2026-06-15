@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import { useECharts } from '../composables/useECharts'
 
@@ -27,7 +27,7 @@ function render() {
     chart = init(chartRef.value)
   }
   if (props.monthlyStats.length === 0) {
-    chart.setOption({ series: [{ type: 'bar', data: [] }] }, { notMerge: true })
+    chart.clear()
     return
   }
 
@@ -84,12 +84,14 @@ function render() {
 
 watch(() => props.monthlyStats, render, { deep: true })
 
-onMounted(() => {
+onMounted(async () => {
+  await nextTick()
   render()
   window.addEventListener('resize', handleResize)
 })
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
+  chart = null
 })
 </script>
 

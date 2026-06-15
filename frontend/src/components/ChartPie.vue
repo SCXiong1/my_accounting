@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import { centsToYuan } from '../core/format'
 import { useECharts } from '../composables/useECharts'
@@ -49,12 +49,14 @@ function render() {
 
 watch(() => props.data, render, { deep: true })
 
-onMounted(() => {
+onMounted(async () => {
+  await nextTick()
   render()
   window.addEventListener('resize', handleResize)
 })
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
+  chart = null
 })
 </script>
 

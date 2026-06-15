@@ -11,10 +11,16 @@ export interface Tag {
 
 export const useTagStore = defineStore('tag', () => {
   const list = ref<Tag[]>([])
+  const loading = ref(false)
 
   async function fetchList() {
-    const res = await api.get('/v1/tags')
-    list.value = res.data
+    loading.value = true
+    try {
+      const res = await api.get('/v1/tags')
+      list.value = res.data
+    } finally {
+      loading.value = false
+    }
   }
 
   async function create(name: string) {
@@ -39,5 +45,5 @@ export const useTagStore = defineStore('tag', () => {
     await fetchList()
   }
 
-  return { list, fetchList, create, update, remove, sort }
+  return { list, loading, fetchList, create, update, remove, sort }
 })
