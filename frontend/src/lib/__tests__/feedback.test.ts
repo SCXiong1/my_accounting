@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import axios from 'axios'
+import type { InternalAxiosRequestConfig } from 'axios'
 import { notifyState, withMutate } from '../feedback'
 
 describe('withMutate', () => {
@@ -10,7 +11,9 @@ describe('withMutate', () => {
   it('调用 fn 成功时显示 success 通知', async () => {
     let called = false
     await withMutate(
-      async () => { called = true },
+      async () => {
+        called = true
+      },
       '操作成功',
       '操作失败',
     )
@@ -27,11 +30,19 @@ describe('withMutate', () => {
       'ERR_BAD_REQUEST',
       undefined,
       undefined,
-      { status: 400, data: { detail: '分类名称已存在' }, statusText: 'Bad Request', headers: {}, config: {} as any },
+      {
+        status: 400,
+        data: { detail: '分类名称已存在' },
+        statusText: 'Bad Request',
+        headers: {},
+        config: {} as InternalAxiosRequestConfig,
+      },
     )
 
     await withMutate(
-      async () => { throw axiosError },
+      async () => {
+        throw axiosError
+      },
       '操作成功',
       '操作失败',
     )
@@ -43,7 +54,9 @@ describe('withMutate', () => {
 
   it('fn 抛非 axios 错误时显示 fallback 消息', async () => {
     await withMutate(
-      async () => { throw new Error('something broke') },
+      async () => {
+        throw new Error('something broke')
+      },
       '操作成功',
       '备选错误消息',
     )

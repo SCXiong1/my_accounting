@@ -13,7 +13,10 @@ describe('auth store', () => {
       // 模拟已登录状态
       setToken('fake-token')
       const store = useAuthStore()
-      store.$patch({ user: { id: 1, username: 'test', nickname: 'Test', created_at: 0, updated_at: 0 }, token: 'fake-token' })
+      store.$patch({
+        user: { id: 1, username: 'test', nickname: 'Test', created_at: 0, updated_at: 0 },
+        token: 'fake-token',
+      })
 
       store.logout()
 
