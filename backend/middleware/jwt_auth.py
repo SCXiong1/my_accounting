@@ -1,7 +1,8 @@
 from fastapi import Depends, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from utils.security import decode_token
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
 from middleware.error_handler import UnauthorizedException
+from utils.security import decode_token
 
 security = HTTPBearer(auto_error=False)
 
