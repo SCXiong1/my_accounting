@@ -1,5 +1,6 @@
 import { reactive } from 'vue'
 import { getErrorMessage } from './error'
+import { TOAST_DURATION_MS } from '../core/constants'
 
 export interface NotifyItem {
   id: number
@@ -13,7 +14,7 @@ export const notifyState = reactive<{ items: NotifyItem[] }>({ items: [] })
 function add(type: NotifyItem['type'], message: string) {
   const id = ++nextId
   notifyState.items.push({ id, type, message })
-  setTimeout(() => remove(id), 2500)
+  setTimeout(() => remove(id), TOAST_DURATION_MS)
 }
 
 export function remove(id: number) {
@@ -23,9 +24,15 @@ export function remove(id: number) {
   }
 }
 
-export function showSuccess(msg: string) { add('success', msg) }
-export function showError(msg: string) { add('error', msg) }
-export function showTip(msg: string) { add('tip', msg) }
+export function showSuccess(msg: string) {
+  add('success', msg)
+}
+export function showError(msg: string) {
+  add('error', msg)
+}
+export function showTip(msg: string) {
+  add('tip', msg)
+}
 
 export async function withMutate(
   fn: () => Promise<void>,

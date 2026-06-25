@@ -1,9 +1,10 @@
 import axios from 'axios'
 import { getToken, removeToken } from './token'
+import { API_TIMEOUT_MS } from '../core/constants'
 
 const api = axios.create({
   baseURL: '/api',
-  timeout: 10000,
+  timeout: API_TIMEOUT_MS,
   headers: { 'Content-Type': 'application/json' },
 })
 
@@ -67,7 +68,9 @@ export function createCancellableRequest() {
     }
   }
 
-  async function execute<T>(requestFn: (signal: AbortSignal) => Promise<T>): Promise<T | undefined> {
+  async function execute<T>(
+    requestFn: (signal: AbortSignal) => Promise<T>,
+  ): Promise<T | undefined> {
     cancel()
     const thisId = ++requestId
     const controller = new AbortController()

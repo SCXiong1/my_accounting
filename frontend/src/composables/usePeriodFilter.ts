@@ -15,7 +15,10 @@ export function usePeriodFilter() {
   const pickStep = ref<'start' | 'end'>('start')
   const customStartDate = ref(new Date())
   const customEndDate = ref(new Date())
-  const pickerValue = ref<any[]>([new Date().getFullYear(), new Date().getMonth() + 1])
+  const pickerValue = ref<string[]>([
+    String(new Date().getFullYear()),
+    String(new Date().getMonth() + 1),
+  ])
   const pendingStart = ref<Date | null>(null)
 
   const periods = PERIOD_OPTIONS
@@ -61,7 +64,10 @@ export function usePeriodFilter() {
   function openCustom() {
     pendingStart.value = null
     pickStep.value = 'start'
-    pickerValue.value = [customStartDate.value.getFullYear(), customStartDate.value.getMonth() + 1]
+    pickerValue.value = [
+      String(customStartDate.value.getFullYear()),
+      String(customStartDate.value.getMonth() + 1),
+    ]
     showCustomPopup.value = true
   }
 
@@ -69,12 +75,18 @@ export function usePeriodFilter() {
     if (pickStep.value === 'start') {
       pendingStart.value = new Date(selectedValues[0], selectedValues[1] - 1, 1)
       pickStep.value = 'end'
-      pickerValue.value = [customEndDate.value.getFullYear(), customEndDate.value.getMonth() + 1]
+      pickerValue.value = [
+        String(customEndDate.value.getFullYear()),
+        String(customEndDate.value.getMonth() + 1),
+      ]
     } else {
       const endDate = new Date(selectedValues[0], selectedValues[1], 0, 23, 59, 59)
       const startDate = pendingStart.value!
       customStartDate.value = startDate
-      customEndDate.value = endDate < startDate ? new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0, 23, 59, 59) : endDate
+      customEndDate.value =
+        endDate < startDate
+          ? new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0, 23, 59, 59)
+          : endDate
       showCustomPopup.value = false
       activePeriod.value = 'custom'
     }
@@ -85,9 +97,17 @@ export function usePeriodFilter() {
   }
 
   return {
-    activePeriod, periods, timeRange,
-    showCustomPopup, pickStep, pickerValue,
-    customStartDate, customEndDate,
-    selectPeriod, openCustom, onPickerConfirm, onCancelCustom,
+    activePeriod,
+    periods,
+    timeRange,
+    showCustomPopup,
+    pickStep,
+    pickerValue,
+    customStartDate,
+    customEndDate,
+    selectPeriod,
+    openCustom,
+    onPickerConfirm,
+    onCancelCustom,
   }
 }
