@@ -1,12 +1,14 @@
 import time
-from sqlalchemy.ext.asyncio import AsyncSession
+
 from sqlalchemy import select
-from models.user import User
-from models.expense_category import ExpenseCategory
-from utils.security import hash_password, verify_password, create_token
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from middleware.error_handler import BadRequestException, UnauthorizedException
-from schemas.auth import RegisterRequest, LoginRequest, AuthResponse
+from models.category import Category
+from models.user import User
+from schemas.auth import AuthResponse, LoginRequest, RegisterRequest
 from schemas.user import UserResponse
+from utils.security import create_token, hash_password, verify_password
 
 PRESET_CATEGORIES = [
     {"name": "餐饮", "icon": "🍽️", "color": "#FF5722"},
@@ -38,7 +40,7 @@ async def register(db: AsyncSession, req: RegisterRequest) -> AuthResponse:
     await db.flush()
 
     for i, cat in enumerate(PRESET_CATEGORIES):
-        db.add(ExpenseCategory(
+        db.add(Category(
             uid=user.id,
             name=cat["name"],
             icon=cat["icon"],

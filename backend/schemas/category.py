@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+
 from schemas.base import BaseSchema
 
 
@@ -29,5 +30,5 @@ class CategoryResponse(BaseSchema):
     icon: str
     color: str
     display_order: int
-    expense_count: int = 0
+    transaction_count: int = 0
     total_amount: int = 0

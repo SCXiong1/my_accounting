@@ -1,18 +1,27 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
+
+from sqlalchemy import case, func, select
+from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, case
-from models.expense import Expense
-from models.expense_category import ExpenseCategory
-from models.expense_tag import ExpenseTag
-from models.expense_tag_index import ExpenseTagIndex
+from sqlalchemy.sql import Select
+
+from constants import APP_TIMEZONE
+from models.category import Category
+from models.tag import Tag
+from models.transaction import Transaction
+from models.transaction_tag import TransactionTag
 from schemas.statistics import (
-    OverviewResponse, CategoryStatItem, TagStatItem, MonthlyStatItem,
-    MonthlyCategoryDetail, MonthlyTagDetail,
+    CategoryStatItem,
+    MonthlyCategoryDetail,
+    MonthlyStatItem,
+    MonthlyTagDetail,
+    OverviewResponse,
+    TagStatItem,
 )
 
 
 async def overview(db: AsyncSession, uid: int) -> OverviewResponse:
-    tz = timezone(timedelta(hours=8))
+    tz = APP_TIMEZONE
     now = datetime.now(tz)
 
     today_start = int(now.replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
@@ -28,14 +37,22 @@ async def overview(db: AsyncSession, uid: int) -> OverviewResponse:
 
     result = await db.execute(
         select(
-            func.coalesce(func.sum(case((Expense.transaction_time >= today_start, Expense.amount), else_=0)), 0).label("today"),
-            func.coalesce(func.sum(case((Expense.transaction_time >= week_start, Expense.amount), else_=0)), 0).label("week"),
-            func.coalesce(func.sum(case((Expense.transaction_time >= month_start, Expense.amount), else_=0)), 0).label("month"),
-            func.coalesce(func.sum(case((Expense.transaction_time >= year_start, Expense.amount), else_=0)), 0).label("year"),
+            func.coalesce(func.sum(case(
+                (Transaction.transaction_time >= today_start, Transaction.amount), else_=0
+            )), 0).label("today"),
+            func.coalesce(func.sum(case(
+                (Transaction.transaction_time >= week_start, Transaction.amount), else_=0
+            )), 0).label("week"),
+            func.coalesce(func.sum(case(
+                (Transaction.transaction_time >= month_start, Transaction.amount), else_=0
+            )), 0).label("month"),
+            func.coalesce(func.sum(case(
+                (Transaction.transaction_time >= year_start, Transaction.amount), else_=0
+            )), 0).label("year"),
         ).where(
-            Expense.uid == uid,
-            Expense.deleted == 0,
-            Expense.transaction_time < today_end,
+            Transaction.uid == uid,
+            Transaction.deleted == 0,
+            Transaction.transaction_time < today_end,
         )
     )
     row = result.one()
@@ -55,13 +72,13 @@ async def by_category(
     tag_ids: list[int] | None = None,
 ) -> list[CategoryStatItem]:
     base_query = select(
-        Expense.category_id,
-        func.sum(Expense.amount).label("total"),
-        func.count(Expense.id).label("cnt"),
-    ).where(Expense.uid == uid, Expense.deleted == 0)
+        Transaction.category_id,
+        func.sum(Transaction.amount).label("total"),
+        func.count(Transaction.id).label("cnt"),
+    ).where(Transaction.uid == uid, Transaction.deleted == 0)
 
     base_query = _apply_filters(base_query, start_time, end_time, tag_ids)
-    base_query = base_query.group_by(Expense.category_id)
+    base_query = base_query.group_by(Transaction.category_id)
 
     result = await db.execute(base_query)
     rows = result.all()
@@ -73,7 +90,7 @@ async def by_category(
 
     cat_ids = [row.category_id for row in rows]
     cat_result = await db.execute(
-        select(ExpenseCategory).where(ExpenseCategory.id.in_(cat_ids))
+        select(Category).where(Category.id.in_(cat_ids))
     )
     cat_map = {c.id: c for c in cat_result.scalars().all()}
 
@@ -102,16 +119,16 @@ async def by_tag(
     category_ids: list[int] | None = None,
 ) -> list[TagStatItem]:
     base_query = select(
-        ExpenseTagIndex.tag_id,
-        func.sum(Expense.amount).label("total"),
-        func.count(Expense.id).label("cnt"),
-    ).join(Expense, Expense.id == ExpenseTagIndex.expense_id).where(
-        ExpenseTagIndex.uid == uid,
-        Expense.deleted == 0,
+        TransactionTag.tag_id,
+        func.sum(Transaction.amount).label("total"),
+        func.count(Transaction.id).label("cnt"),
+    ).join(Transaction, Transaction.id == TransactionTag.transaction_id).where(
+        TransactionTag.uid == uid,
+        Transaction.deleted == 0,
     )
 
     base_query = _apply_filters(base_query, start_time, end_time, category_ids=category_ids)
-    base_query = base_query.group_by(ExpenseTagIndex.tag_id)
+    base_query = base_query.group_by(TransactionTag.tag_id)
 
     result = await db.execute(base_query)
     rows = result.all()
@@ -123,7 +140,7 @@ async def by_tag(
 
     tag_ids_list = [row.tag_id for row in rows]
     tag_result = await db.execute(
-        select(ExpenseTag).where(ExpenseTag.id.in_(tag_ids_list), ExpenseTag.deleted == 0)
+        select(Tag).where(Tag.id.in_(tag_ids_list))
     )
     tag_map = {t.id: t for t in tag_result.scalars().all()}
 
@@ -148,29 +165,29 @@ def _monthly_time_range(
     start_year: int | None, start_month: int | None,
     end_year: int | None, end_month: int | None,
 ) -> tuple[int, int]:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(APP_TIMEZONE)
     sy = start_year or now.year
     sm = start_month or 1
     ey = end_year or now.year
     em = end_month or now.month
 
-    start_ts = int(datetime(sy, sm, 1, tzinfo=timezone.utc).timestamp())
+    start_ts = int(datetime(sy, sm, 1, tzinfo=APP_TIMEZONE).timestamp())
     if em == 12:
-        end_ts = int(datetime(ey + 1, 1, 1, tzinfo=timezone.utc).timestamp())
+        end_ts = int(datetime(ey + 1, 1, 1, tzinfo=APP_TIMEZONE).timestamp())
     else:
-        end_ts = int(datetime(ey, em + 1, 1, tzinfo=timezone.utc).timestamp())
+        end_ts = int(datetime(ey, em + 1, 1, tzinfo=APP_TIMEZONE).timestamp())
     return start_ts, end_ts
 
 
-async def _load_category_map(db: AsyncSession, rows) -> dict:
+async def _load_category_map(db: AsyncSession, rows: list[Row]) -> dict:
     cat_ids = list(set(r.category_id for r in rows))
     result = await db.execute(
-        select(ExpenseCategory).where(ExpenseCategory.id.in_(cat_ids))
+        select(Category).where(Category.id.in_(cat_ids))
     )
     return {c.id: c for c in result.scalars().all()}
 
 
-def _aggregate_categories(rows, tz) -> dict[tuple[int, int], dict]:
+def _aggregate_categories(rows: list[Row], tz: timezone) -> dict[tuple[int, int], dict]:
     data: dict[tuple[int, int], dict] = {}
     for row in rows:
         dt = datetime.fromtimestamp(row.transaction_time, tz=tz)
@@ -185,24 +202,21 @@ def _aggregate_categories(rows, tz) -> dict[tuple[int, int], dict]:
 
 
 async def _aggregate_tags(
-    db: AsyncSession, uid: int, rows, tz,
+    db: AsyncSession, uid: int, rows: list[Row], tz: timezone,
 ) -> tuple[dict[int, str], dict[tuple[int, int], dict[int, int]]]:
-    expense_ids = [r.id for r in rows]
+    transaction_ids = [r.id for r in rows]
     amount_map = {r.id: r.amount for r in rows}
     month_map: dict[int, tuple[int, int]] = {}
     for row in rows:
         dt = datetime.fromtimestamp(row.transaction_time, tz=tz)
         month_map[row.id] = (dt.year, dt.month)
 
-    # 一次 JOIN 同时拿到 tag_id 和 tag_name
     tag_result = await db.execute(
-        select(ExpenseTagIndex.expense_id, ExpenseTagIndex.tag_id, ExpenseTag.name).join(
-            ExpenseTag, ExpenseTag.id == ExpenseTagIndex.tag_id
+        select(TransactionTag.transaction_id, TransactionTag.tag_id, Tag.name).join(
+            Tag, Tag.id == TransactionTag.tag_id
         ).where(
-            ExpenseTagIndex.expense_id.in_(expense_ids),
-            ExpenseTagIndex.uid == uid,
-            ExpenseTagIndex.deleted == 0,
-            ExpenseTag.deleted == 0,
+            TransactionTag.transaction_id.in_(transaction_ids),
+            TransactionTag.uid == uid,
         )
     )
     tag_rows = tag_result.all()
@@ -211,12 +225,12 @@ async def _aggregate_tags(
     monthly_data: dict[tuple[int, int], dict[int, int]] = {}
 
     for tr in tag_rows:
-        key = month_map.get(tr.expense_id)
+        key = month_map.get(tr.transaction_id)
         if key:
             tag_map[tr.tag_id] = tr.name
             monthly_data.setdefault(key, {})
             monthly_data[key][tr.tag_id] = \
-                monthly_data[key].get(tr.tag_id, 0) + amount_map[tr.expense_id]
+                monthly_data[key].get(tr.tag_id, 0) + amount_map[tr.transaction_id]
 
     return tag_map, monthly_data
 
@@ -273,12 +287,12 @@ async def monthly(
     start_ts, end_ts = _monthly_time_range(start_year, start_month, end_year, end_month)
 
     base_query = select(
-        Expense.id, Expense.amount, Expense.category_id, Expense.transaction_time,
+        Transaction.id, Transaction.amount, Transaction.category_id, Transaction.transaction_time,
     ).where(
-        Expense.uid == uid,
-        Expense.deleted == 0,
-        Expense.transaction_time >= start_ts,
-        Expense.transaction_time < end_ts,
+        Transaction.uid == uid,
+        Transaction.deleted == 0,
+        Transaction.transaction_time >= start_ts,
+        Transaction.transaction_time < end_ts,
     )
     base_query = _apply_filters(base_query, tag_ids=tag_ids, category_ids=category_ids)
 
@@ -288,35 +302,42 @@ async def monthly(
         return []
 
     cat_map = await _load_category_map(db, rows)
-    tz = timezone(timedelta(hours=8))
+    tz = APP_TIMEZONE
     monthly_data = _aggregate_categories(rows, tz)
     tag_map, tag_data = await _aggregate_tags(db, uid, rows, tz)
 
     return _build_monthly_items(monthly_data, cat_map, tag_map, tag_data)
 
 
-def _apply_time_filter(query, start_time: int | None = None, end_time: int | None = None):
+def _apply_time_filter(query: Select, start_time: int | None = None, end_time: int | None = None) -> Select:
     if start_time is not None:
-        query = query.where(Expense.transaction_time >= int(start_time))
+        query = query.where(Transaction.transaction_time >= int(start_time))
     if end_time is not None:
-        query = query.where(Expense.transaction_time <= int(end_time))
+        query = query.where(Transaction.transaction_time <= int(end_time))
     return query
 
 
-def _apply_tag_category_filter(query, tag_ids: list[int] | None = None, category_ids: list[int] | None = None):
+def _apply_tag_category_filter(
+    query: Select, tag_ids: list[int] | None = None, category_ids: list[int] | None = None,
+) -> Select:
     if tag_ids:
-        tag_subquery = select(ExpenseTagIndex.expense_id).where(
-            ExpenseTagIndex.tag_id.in_(tag_ids),
-            ExpenseTagIndex.uid == Expense.uid,
-            ExpenseTagIndex.deleted == 0,
+        tag_subquery = select(TransactionTag.transaction_id).where(
+            TransactionTag.tag_id.in_(tag_ids),
+            TransactionTag.uid == Transaction.uid,
         ).scalar_subquery()
-        query = query.where(Expense.id.in_(tag_subquery))
+        query = query.where(Transaction.id.in_(tag_subquery))
     if category_ids:
-        query = query.where(Expense.category_id.in_(category_ids))
+        query = query.where(Transaction.category_id.in_(category_ids))
     return query
 
 
-def _apply_filters(query, start_time=None, end_time=None, tag_ids=None, category_ids=None):
+def _apply_filters(
+    query: Select,
+    start_time: int | None = None,
+    end_time: int | None = None,
+    tag_ids: list[int] | None = None,
+    category_ids: list[int] | None = None,
+) -> Select:
     """兼容包装——委托给拆分的子函数"""
     query = _apply_time_filter(query, start_time, end_time)
     query = _apply_tag_category_filter(query, tag_ids, category_ids)

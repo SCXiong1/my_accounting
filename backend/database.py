@@ -1,6 +1,10 @@
+from collections.abc import AsyncGenerator
+from typing import Any
+
 from sqlalchemy import event
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
+
 from config import get
 
 DATABASE_PATH = get("database.path")
@@ -10,7 +14,7 @@ engine = create_async_engine(DATABASE_URL, echo=False)
 
 # 每个连接启用外键约束
 @event.listens_for(engine.sync_engine, "connect")
-def _set_sqlite_pragma(dbapi_connection, _connection_record):
+def _set_sqlite_pragma(dbapi_connection: Any, _connection_record: Any) -> None:
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA foreign_keys = ON")
     cursor.close()
@@ -22,12 +26,12 @@ class Base(DeclarativeBase):
     pass
 
 
-async def get_db() -> AsyncSession:
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with async_session() as session:
         yield session
 
 
-async def init_db():
+async def init_db() -> None:
     import os
     os.makedirs(os.path.dirname(DATABASE_PATH) or ".", exist_ok=True)
     async with engine.begin() as conn:

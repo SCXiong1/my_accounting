@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+
 from schemas.base import BaseSchema
 
 
@@ -25,4 +26,4 @@ class AuthResponse(BaseSchema):
     user: "UserResponse"
 
 
-from schemas.user import UserResponse
+from schemas.user import UserResponse  # noqa: E402

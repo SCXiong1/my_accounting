@@ -1,17 +1,18 @@
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from logging.config import fileConfig
+
 from sqlalchemy.ext.asyncio import create_async_engine
+
+import models.category  # noqa: F401
+import models.tag  # noqa: F401
+import models.transaction  # noqa: F401
+import models.transaction_tag  # noqa: F401
 from alembic import context
 from database import Base
-
-import models.user  # noqa: ensure all models loaded
-import models.expense_category  # noqa
-import models.expense_tag  # noqa
-import models.expense  # noqa
-import models.expense_tag_index  # noqa
 
 config = context.config
 

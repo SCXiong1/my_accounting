@@ -1,4 +1,5 @@
 import os
+
 import yaml
 
 _config: dict | None = None
@@ -19,12 +20,12 @@ def _load_config() -> dict:
         return _config
 
     config_path = os.environ.get("APP_CONFIG", "config.yaml")
-    with open(config_path, "r", encoding="utf-8") as f:
+    with open(config_path, encoding="utf-8") as f:
         _config = yaml.safe_load(f) or {}
     return _config
 
 
-def _dict_get(d: dict, path_parts: list[str]):
+def _dict_get(d: dict, path_parts: list[str]) -> object | None:
     for p in path_parts:
         if isinstance(d, dict):
             d = d.get(p)
@@ -33,7 +34,7 @@ def _dict_get(d: dict, path_parts: list[str]):
     return d
 
 
-def get(key: str, default=None):
+def get(key: str, default: object = None) -> object:
     """获取配置值，支持点号路径如 'server.port'。
 
     优先级：环境变量 APP_<SECTION>_<KEY> > YAML 配置文件 > 内置默认值 > default 参数

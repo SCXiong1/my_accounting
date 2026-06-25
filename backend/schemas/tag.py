@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+
 from schemas.base import BaseSchema
 
 
@@ -23,4 +24,4 @@ class TagResponse(BaseSchema):
     id: int
     name: str
     display_order: int
-    expense_count: int = 0
+    transaction_count: int = 0

@@ -1,23 +1,26 @@
 from pydantic import BaseModel, Field
+
 from schemas.base import BaseSchema
 
 
-class ExpenseCreate(BaseModel):
+class TransactionCreate(BaseModel):
     amount: int = Field(gt=0)
     category_id: int
     tag_ids: list[int] = Field(default_factory=list)
     transaction_time: int
-    timezone_offset: int = Field(default=480)
+    timezone_offset: int = Field(default=480)  # UTC+8 in minutes
     note: str = Field(default="", max_length=255)
+    type: str = "expense"
 
 
-class ExpenseUpdate(BaseModel):
+class TransactionUpdate(BaseModel):
     amount: int | None = Field(default=None, gt=0)
     category_id: int | None = None
     tag_ids: list[int] | None = None
     transaction_time: int | None = None
     timezone_offset: int | None = None
     note: str | None = Field(default=None, max_length=255)
+    type: str | None = None
 
 
 class TagBrief(BaseSchema):
@@ -32,7 +35,7 @@ class CategoryBrief(BaseSchema):
     color: str
 
 
-class ExpenseResponse(BaseSchema):
+class TransactionResponse(BaseSchema):
     id: int
     amount: int
     category: CategoryBrief
@@ -40,10 +43,11 @@ class ExpenseResponse(BaseSchema):
     transaction_time: int
     timezone_offset: int
     note: str
+    type: str
 
 
-class ExpenseListResponse(BaseModel):
-    items: list[ExpenseResponse]
+class TransactionListResponse(BaseModel):
+    items: list[TransactionResponse]
     next_cursor: int | None = None
     total: int = 0
 

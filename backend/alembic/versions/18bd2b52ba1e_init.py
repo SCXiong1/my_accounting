@@ -1,21 +1,21 @@
 """init
 
 Revision ID: 18bd2b52ba1e
-Revises: 
+Revises:
 Create Date: 2026-05-12 17:03:16.947182
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '18bd2b52ba1e'
-down_revision: Union[str, Sequence[str], None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -76,7 +76,10 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['uid'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index('idx_expense_uid_deleted_category', 'expense', ['uid', 'deleted', 'category_id', 'transaction_time'], unique=False)
+    op.create_index(
+        'idx_expense_uid_deleted_category', 'expense',
+        ['uid', 'deleted', 'category_id', 'transaction_time'], unique=False,
+    )
     op.create_index('idx_expense_uid_deleted_time', 'expense', ['uid', 'deleted', 'transaction_time'], unique=False)
     op.create_table('expense_tag_index',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),

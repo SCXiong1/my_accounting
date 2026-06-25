@@ -1,15 +1,24 @@
+from typing import Any
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from database import get_db
 from middleware.jwt_auth import get_current_uid
-from schemas.expense import ExpenseCreate, ExpenseUpdate, BatchDeleteRequest
-from services import expense_service
+from schemas.transaction import (
+    BatchDeleteRequest,
+    TransactionCreate,
+    TransactionListResponse,
+    TransactionResponse,
+    TransactionUpdate,
+)
+from services import transaction_service
 
-router = APIRouter(prefix="/api/v1/expenses", tags=["支出"])
+router = APIRouter(prefix="/api/v1/transactions", tags=["支出"])
 
 
 @router.get("")
-async def list_expenses(
+async def list_transactions(
     cursor: int | None = Query(default=None),
     limit: int = Query(default=20, le=100),
     start_time: int | None = Query(default=None),
@@ -21,8 +30,8 @@ async def list_expenses(
     deleted: int = Query(default=0, le=1, ge=0),
     uid: int = Depends(get_current_uid),
     db: AsyncSession = Depends(get_db),
-):
-    return await expense_service.list_expenses(
+) -> TransactionListResponse:
+    return await transaction_service.list_transactions(
         db, uid, cursor=cursor, limit=limit,
         start_time=start_time, end_time=end_time,
         category_id=category_id, tag_id=tag_id, keyword=keyword,
@@ -31,56 +40,56 @@ async def list_expenses(
 
 
 @router.post("/batch-delete")
-async def batch_delete_expenses(
+async def batch_delete_transactions(
     req: BatchDeleteRequest,
     uid: int = Depends(get_current_uid),
     db: AsyncSession = Depends(get_db),
-):
-    deleted_count = await expense_service.permanent_delete_expenses(db, uid, req.ids)
+) -> dict[str, Any]:
+    deleted_count = await transaction_service.permanent_delete_transactions(db, uid, req.ids)
     return {"deleted_count": deleted_count}
 
 
-@router.get("/{expense_id}")
-async def get_expense(
-    expense_id: int,
+@router.get("/{transaction_id}")
+async def get_transaction(
+    transaction_id: int,
     uid: int = Depends(get_current_uid),
     db: AsyncSession = Depends(get_db),
-):
-    return await expense_service.get_expense(db, uid, expense_id)
+) -> TransactionResponse:
+    return await transaction_service.get_transaction(db, uid, transaction_id)
 
 
 @router.post("")
-async def create_expense(
-    req: ExpenseCreate,
+async def create_transaction(
+    req: TransactionCreate,
     uid: int = Depends(get_current_uid),
     db: AsyncSession = Depends(get_db),
-):
-    return await expense_service.create_expense(db, uid, req)
+) -> TransactionResponse:
+    return await transaction_service.create_transaction(db, uid, req)
 
 
-@router.put("/{expense_id}")
-async def update_expense(
-    expense_id: int,
-    req: ExpenseUpdate,
+@router.put("/{transaction_id}")
+async def update_transaction(
+    transaction_id: int,
+    req: TransactionUpdate,
     uid: int = Depends(get_current_uid),
     db: AsyncSession = Depends(get_db),
-):
-    return await expense_service.update_expense(db, uid, expense_id, req)
+) -> TransactionResponse:
+    return await transaction_service.update_transaction(db, uid, transaction_id, req)
 
 
-@router.post("/{expense_id}/restore")
-async def restore_expense(
-    expense_id: int,
+@router.post("/{transaction_id}/restore")
+async def restore_transaction(
+    transaction_id: int,
     uid: int = Depends(get_current_uid),
     db: AsyncSession = Depends(get_db),
-):
-    return await expense_service.restore_expense(db, uid, expense_id)
+) -> dict[str, Any]:
+    return await transaction_service.restore_transaction(db, uid, transaction_id)
 
 
-@router.delete("/{expense_id}")
-async def delete_expense(
-    expense_id: int,
+@router.delete("/{transaction_id}")
+async def delete_transaction(
+    transaction_id: int,
     uid: int = Depends(get_current_uid),
     db: AsyncSession = Depends(get_db),
-):
-    return await expense_service.delete_expense(db, uid, expense_id)
+) -> dict[str, Any]:
+    return await transaction_service.delete_transaction(db, uid, transaction_id)

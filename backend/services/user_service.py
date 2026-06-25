@@ -1,10 +1,12 @@
 import time
-from sqlalchemy.ext.asyncio import AsyncSession
+
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from middleware.error_handler import BadRequestException, NotFoundException
 from models.user import User
-from utils.security import hash_password, verify_password, create_token
-from middleware.error_handler import NotFoundException, BadRequestException
 from schemas.user import UpdateProfileRequest, UserResponse
+from utils.security import create_token, hash_password, verify_password
 
 
 async def get_profile(db: AsyncSession, uid: int) -> UserResponse:

@@ -1,30 +1,38 @@
 import time
+
+from sqlalchemy import delete as sql_delete
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, update, or_
-from models.expense import Expense
-from models.expense_category import ExpenseCategory
-from models.expense_tag import ExpenseTag
-from models.expense_tag_index import ExpenseTagIndex
+from sqlalchemy.sql import Select
+
+from constants import DEFAULT_PAGE_SIZE
 from middleware.error_handler import NotFoundException
-from schemas.expense import (
-    ExpenseCreate, ExpenseUpdate, ExpenseResponse, ExpenseListResponse,
-    CategoryBrief, TagBrief,
+from models.category import Category
+from models.tag import Tag
+from models.transaction import Transaction
+from models.transaction_tag import TransactionTag
+from schemas.transaction import (
+    CategoryBrief,
+    TagBrief,
+    TransactionCreate,
+    TransactionListResponse,
+    TransactionResponse,
+    TransactionUpdate,
 )
 
 SORT_FIELDS = {
-    "time": Expense.transaction_time,
-    "amount": Expense.amount,
+    "time": Transaction.transaction_time,
+    "amount": Transaction.amount,
 }
 
 
-async def _validate_tags(db: AsyncSession, uid: int, tag_ids: list[int]):
+async def _validate_tags(db: AsyncSession, uid: int, tag_ids: list[int]) -> None:
     if not tag_ids:
         return
     result = await db.execute(
-        select(ExpenseTag).where(
-            ExpenseTag.id.in_(tag_ids),
-            ExpenseTag.uid == uid,
-            ExpenseTag.deleted == 0,
+        select(Tag).where(
+            Tag.id.in_(tag_ids),
+            Tag.uid == uid,
         )
     )
     valid_ids = {t.id for t in result.scalars().all()}
@@ -33,53 +41,47 @@ async def _validate_tags(db: AsyncSession, uid: int, tag_ids: list[int]):
         raise NotFoundException(f"标签({','.join(map(str, invalid))})")
 
 
-def _apply_order(query, sort_by: str):
-    col = SORT_FIELDS.get(sort_by, Expense.transaction_time)
-    return query.order_by(col.desc(), Expense.id.desc())
+def _apply_order(query: Select, sort_by: str) -> Select:
+    col = SORT_FIELDS.get(sort_by, Transaction.transaction_time)
+    return query.order_by(col.desc(), Transaction.id.desc())
 
 
-def _apply_keyword(query, keyword: str | None, uid: int):
+def _apply_keyword(query: Select, keyword: str | None, uid: int) -> Select:
     """智能关键词搜索：金额、分类、标签、备注"""
     if not keyword:
         return query
 
     kw = keyword.strip()
-    conditions = [Expense.note.contains(kw)]
+    conditions = [Transaction.note.contains(kw)]
 
-    # 金额搜索：精确匹配或前缀匹配（单位：分）
     try:
         amount_val = int(kw)
-        conditions.append(Expense.amount == amount_val)
+        conditions.append(Transaction.amount == amount_val)
     except ValueError:
         pass
 
-    # 分类名搜索
-    cat_sub = select(ExpenseCategory.id).where(
-        ExpenseCategory.uid == uid,
-        ExpenseCategory.name.contains(kw),
-        ExpenseCategory.deleted == 0,
+    cat_sub = select(Category.id).where(
+        Category.uid == uid,
+        Category.name.contains(kw),
     ).scalar_subquery()
-    conditions.append(Expense.category_id.in_(cat_sub))
+    conditions.append(Transaction.category_id.in_(cat_sub))
 
-    # 标签名搜索
-    tag_sub = select(ExpenseTagIndex.expense_id).join(
-        ExpenseTag, ExpenseTag.id == ExpenseTagIndex.tag_id
+    tag_sub = select(TransactionTag.transaction_id).join(
+        Tag, Tag.id == TransactionTag.tag_id
     ).where(
-        ExpenseTag.uid == uid,
-        ExpenseTag.name.contains(kw),
-        ExpenseTag.deleted == 0,
-        ExpenseTagIndex.deleted == 0,
+        Tag.uid == uid,
+        Tag.name.contains(kw),
     ).scalar_subquery()
-    conditions.append(Expense.id.in_(tag_sub))
+    conditions.append(Transaction.id.in_(tag_sub))
 
     return query.where(or_(*conditions))
 
 
-async def list_expenses(
+async def list_transactions(
     db: AsyncSession,
     uid: int,
     cursor: int | None = None,
-    limit: int = 20,
+    limit: int = DEFAULT_PAGE_SIZE,
     start_time: int | None = None,
     end_time: int | None = None,
     category_id: int | None = None,
@@ -87,31 +89,30 @@ async def list_expenses(
     keyword: str | None = None,
     sort_by: str = "time",
     show_deleted: bool = False,
-) -> ExpenseListResponse:
+) -> TransactionListResponse:
     deleted_val = 1 if show_deleted else 0
-    query = select(Expense).where(Expense.uid == uid, Expense.deleted == deleted_val)
-    count_query = select(func.count(Expense.id)).where(Expense.uid == uid, Expense.deleted == deleted_val)
+    query = select(Transaction).where(Transaction.uid == uid, Transaction.deleted == deleted_val)
+    count_query = select(func.count(Transaction.id)).where(Transaction.uid == uid, Transaction.deleted == deleted_val)
 
     if cursor:
-        query = query.where(Expense.id < cursor)
-        count_query = count_query.where(Expense.id < cursor)
+        query = query.where(Transaction.id < cursor)
+        count_query = count_query.where(Transaction.id < cursor)
     if start_time:
-        query = query.where(Expense.transaction_time >= start_time)
-        count_query = count_query.where(Expense.transaction_time >= start_time)
+        query = query.where(Transaction.transaction_time >= start_time)
+        count_query = count_query.where(Transaction.transaction_time >= start_time)
     if end_time:
-        query = query.where(Expense.transaction_time <= end_time)
-        count_query = count_query.where(Expense.transaction_time <= end_time)
+        query = query.where(Transaction.transaction_time <= end_time)
+        count_query = count_query.where(Transaction.transaction_time <= end_time)
     if category_id:
-        query = query.where(Expense.category_id == category_id)
-        count_query = count_query.where(Expense.category_id == category_id)
+        query = query.where(Transaction.category_id == category_id)
+        count_query = count_query.where(Transaction.category_id == category_id)
     if tag_id:
-        tag_subquery = select(ExpenseTagIndex.expense_id).where(
-            ExpenseTagIndex.tag_id == tag_id,
-            ExpenseTagIndex.uid == uid,
-            ExpenseTagIndex.deleted == 0,
+        tag_subquery = select(TransactionTag.transaction_id).where(
+            TransactionTag.tag_id == tag_id,
+            TransactionTag.uid == uid,
         ).scalar_subquery()
-        query = query.where(Expense.id.in_(tag_subquery))
-        count_query = count_query.where(Expense.id.in_(tag_subquery))
+        query = query.where(Transaction.id.in_(tag_subquery))
+        count_query = count_query.where(Transaction.id.in_(tag_subquery))
 
     query = _apply_keyword(query, keyword, uid)
     count_query = _apply_keyword(count_query, keyword, uid)
@@ -122,46 +123,45 @@ async def list_expenses(
     query = _apply_order(query, sort_by)
     query = query.limit(limit + 1)
     result = await db.execute(query)
-    expenses = result.scalars().all()
+    transactions = result.scalars().all()
 
-    has_more = len(expenses) > limit
+    has_more = len(transactions) > limit
     if has_more:
-        expenses = expenses[:limit]
+        transactions = transactions[:limit]
 
-    items = [_build_response(expense) for expense in expenses]
-    await _fill_relations(db, uid, items, expenses)
+    items = [_build_response(t) for t in transactions]
+    await _fill_relations(db, uid, items, transactions)
 
-    return ExpenseListResponse(
+    return TransactionListResponse(
         items=items,
         next_cursor=items[-1].id if has_more else None,
         total=total,
     )
 
 
-async def get_expense(db: AsyncSession, uid: int, expense_id: int) -> ExpenseResponse:
+async def get_transaction(db: AsyncSession, uid: int, transaction_id: int) -> TransactionResponse:
     result = await db.execute(
-        select(Expense).where(
-            Expense.id == expense_id,
-            Expense.uid == uid,
-            Expense.deleted == 0,
+        select(Transaction).where(
+            Transaction.id == transaction_id,
+            Transaction.uid == uid,
+            Transaction.deleted == 0,
         )
     )
-    expense = result.scalar_one_or_none()
-    if not expense:
+    transaction = result.scalar_one_or_none()
+    if not transaction:
         raise NotFoundException("支出记录")
 
-    item = _build_response(expense)
-    await _fill_relations(db, uid, [item], [expense])
+    item = _build_response(transaction)
+    await _fill_relations(db, uid, [item], [transaction])
     return item
 
 
-async def create_expense(db: AsyncSession, uid: int, req: ExpenseCreate) -> ExpenseResponse:
+async def create_transaction(db: AsyncSession, uid: int, req: TransactionCreate) -> TransactionResponse:
     now = int(time.time())
     category = await db.execute(
-        select(ExpenseCategory).where(
-            ExpenseCategory.id == req.category_id,
-            ExpenseCategory.uid == uid,
-            ExpenseCategory.deleted == 0,
+        select(Category).where(
+            Category.id == req.category_id,
+            Category.uid == uid,
         )
     )
     if not category.scalar_one_or_none():
@@ -169,187 +169,158 @@ async def create_expense(db: AsyncSession, uid: int, req: ExpenseCreate) -> Expe
 
     await _validate_tags(db, uid, req.tag_ids)
 
-    expense = Expense(
+    transaction = Transaction(
         uid=uid,
         amount=req.amount,
         category_id=req.category_id,
         transaction_time=req.transaction_time,
         timezone_offset=req.timezone_offset,
         note=req.note,
+        type=req.type,
         created_at=now,
         updated_at=now,
     )
-    db.add(expense)
+    db.add(transaction)
     await db.flush()
 
     for tag_id in req.tag_ids:
-        db.add(ExpenseTagIndex(
+        db.add(TransactionTag(
             uid=uid,
-            expense_id=expense.id,
+            transaction_id=transaction.id,
             tag_id=tag_id,
             created_at=now,
         ))
 
     await db.commit()
 
-    return await get_expense(db, uid, expense.id)
+    return await get_transaction(db, uid, transaction.id)
 
 
-async def update_expense(db: AsyncSession, uid: int, expense_id: int, req: ExpenseUpdate) -> ExpenseResponse:
+async def update_transaction(
+    db: AsyncSession, uid: int, transaction_id: int, req: TransactionUpdate,
+) -> TransactionResponse:
     result = await db.execute(
-        select(Expense).where(
-            Expense.id == expense_id,
-            Expense.uid == uid,
-            Expense.deleted == 0,
+        select(Transaction).where(
+            Transaction.id == transaction_id,
+            Transaction.uid == uid,
+            Transaction.deleted == 0,
         )
     )
-    expense = result.scalar_one_or_none()
-    if not expense:
+    transaction = result.scalar_one_or_none()
+    if not transaction:
         raise NotFoundException("支出记录")
 
     now = int(time.time())
     if req.amount is not None:
-        expense.amount = req.amount
+        transaction.amount = req.amount
     if req.category_id is not None:
         category = await db.execute(
-            select(ExpenseCategory).where(
-                ExpenseCategory.id == req.category_id,
-                ExpenseCategory.uid == uid,
-                ExpenseCategory.deleted == 0,
+            select(Category).where(
+                Category.id == req.category_id,
+                Category.uid == uid,
             )
         )
         if not category.scalar_one_or_none():
             raise NotFoundException("分类")
-        expense.category_id = req.category_id
+        transaction.category_id = req.category_id
     if req.transaction_time is not None:
-        expense.transaction_time = req.transaction_time
+        transaction.transaction_time = req.transaction_time
     if req.timezone_offset is not None:
-        expense.timezone_offset = req.timezone_offset
+        transaction.timezone_offset = req.timezone_offset
     if req.note is not None:
-        expense.note = req.note
+        transaction.note = req.note
+    if req.type is not None:
+        transaction.type = req.type
 
     if req.tag_ids is not None:
         req.tag_ids = list(set(req.tag_ids))
         await _validate_tags(db, uid, req.tag_ids)
 
-        # 软删除当前标签关联
         await db.execute(
-            update(ExpenseTagIndex).where(
-                ExpenseTagIndex.expense_id == expense_id,
-                ExpenseTagIndex.deleted == 0,
-            ).values(deleted=1, deleted_at=now)
-        )
-        # 批量查询软删除记录，恢复或新建
-        if req.tag_ids:
-            existing_rows = await db.execute(
-                select(ExpenseTagIndex).where(
-                    ExpenseTagIndex.expense_id == expense_id,
-                    ExpenseTagIndex.tag_id.in_(req.tag_ids),
-                    ExpenseTagIndex.deleted == 1,
-                )
+            sql_delete(TransactionTag).where(
+                TransactionTag.transaction_id == transaction_id,
             )
-            existing_map = {row.tag_id: row for row in existing_rows.scalars().all()}
-            for tag_id in req.tag_ids:
-                if tag_id in existing_map:
-                    existing_map[tag_id].deleted = 0
-                    existing_map[tag_id].deleted_at = 0
-                else:
-                    db.add(ExpenseTagIndex(
-                        uid=uid,
-                        expense_id=expense_id,
-                        tag_id=tag_id,
-                        created_at=now,
-                    ))
+        )
+        for tag_id in req.tag_ids:
+            db.add(TransactionTag(
+                uid=uid,
+                transaction_id=transaction_id,
+                tag_id=tag_id,
+                created_at=now,
+            ))
 
-    expense.updated_at = now
+    transaction.updated_at = now
     await db.commit()
 
-    return await get_expense(db, uid, expense.id)
+    return await get_transaction(db, uid, transaction.id)
 
 
-async def restore_expense(db: AsyncSession, uid: int, expense_id: int) -> dict:
+async def restore_transaction(db: AsyncSession, uid: int, transaction_id: int) -> dict:
     result = await db.execute(
-        select(Expense).where(
-            Expense.id == expense_id,
-            Expense.uid == uid,
-            Expense.deleted == 1,
+        select(Transaction).where(
+            Transaction.id == transaction_id,
+            Transaction.uid == uid,
+            Transaction.deleted == 1,
         )
     )
-    expense = result.scalar_one_or_none()
-    if not expense:
+    transaction = result.scalar_one_or_none()
+    if not transaction:
         raise NotFoundException("支出记录")
 
     now = int(time.time())
-    expense.deleted = 0
-    expense.deleted_at = 0
-    expense.updated_at = now
-
-    await db.execute(
-        update(ExpenseTagIndex).where(
-            ExpenseTagIndex.expense_id == expense_id,
-            ExpenseTagIndex.deleted == 1,
-        ).values(deleted=0, deleted_at=0)
-    )
+    transaction.deleted = 0
+    transaction.deleted_at = 0
+    transaction.updated_at = now
 
     await db.commit()
     return {"deleted": False}
 
 
-async def delete_expense(db: AsyncSession, uid: int, expense_id: int) -> dict:
+async def delete_transaction(db: AsyncSession, uid: int, transaction_id: int) -> dict:
     result = await db.execute(
-        select(Expense).where(
-            Expense.id == expense_id,
-            Expense.uid == uid,
-            Expense.deleted == 0,
+        select(Transaction).where(
+            Transaction.id == transaction_id,
+            Transaction.uid == uid,
+            Transaction.deleted == 0,
         )
     )
-    expense = result.scalar_one_or_none()
-    if not expense:
+    transaction = result.scalar_one_or_none()
+    if not transaction:
         raise NotFoundException("支出记录")
 
     now = int(time.time())
-    expense.deleted = 1
-    expense.deleted_at = now
-    expense.updated_at = now
-
-    await db.execute(
-        update(ExpenseTagIndex).where(
-            ExpenseTagIndex.expense_id == expense_id,
-            ExpenseTagIndex.deleted == 0,
-        ).values(deleted=1, deleted_at=now)
-    )
+    transaction.deleted = 1
+    transaction.deleted_at = now
+    transaction.updated_at = now
 
     await db.commit()
     return {"deleted": True}
 
 
-async def permanent_delete_expenses(db: AsyncSession, uid: int, expense_ids: list[int]) -> int:
+async def permanent_delete_transactions(db: AsyncSession, uid: int, transaction_ids: list[int]) -> int:
     """批量永久删除支出记录（已软删除的），返回实际删除数量"""
     result = await db.execute(
-        select(Expense.id).where(
-            Expense.id.in_(expense_ids),
-            Expense.uid == uid,
-            Expense.deleted == 1,
+        select(Transaction.id).where(
+            Transaction.id.in_(transaction_ids),
+            Transaction.uid == uid,
+            Transaction.deleted == 1,
         )
     )
     valid_ids = [row[0] for row in result.all()]
     if not valid_ids:
         return 0
 
-    # 硬删除关联的 tag index（先删子表，避免 FK 约束）
-    from sqlalchemy import delete as sql_delete
     await db.execute(
-        sql_delete(ExpenseTagIndex).where(
-            ExpenseTagIndex.expense_id.in_(valid_ids),
-            ExpenseTagIndex.uid == uid,
+        sql_delete(TransactionTag).where(
+            TransactionTag.transaction_id.in_(valid_ids),
+            TransactionTag.uid == uid,
         )
     )
 
-    # 硬删除支出记录
     await db.execute(
-        sql_delete(Expense).where(
-            Expense.id.in_(valid_ids),
-            Expense.uid == uid,
+        sql_delete(Transaction).where(
+            Transaction.id.in_(valid_ids),
+            Transaction.uid == uid,
         )
     )
 
@@ -357,46 +328,47 @@ async def permanent_delete_expenses(db: AsyncSession, uid: int, expense_ids: lis
     return len(valid_ids)
 
 
-def _build_response(expense: Expense) -> ExpenseResponse:
-    return ExpenseResponse(
-        id=expense.id,
-        amount=expense.amount,
+def _build_response(transaction: Transaction) -> TransactionResponse:
+    return TransactionResponse(
+        id=transaction.id,
+        amount=transaction.amount,
         category=CategoryBrief(id=0, name="", icon="", color=""),
         tags=[],
-        transaction_time=expense.transaction_time,
-        timezone_offset=expense.timezone_offset,
-        note=expense.note,
+        transaction_time=transaction.transaction_time,
+        timezone_offset=transaction.timezone_offset,
+        note=transaction.note,
+        type=transaction.type,
     )
 
 
-async def _fill_relations(db: AsyncSession, uid: int, items: list[ExpenseResponse], expenses: list[Expense]):
-    cat_ids = list(set(e.category_id for e in expenses))
+async def _fill_relations(
+    db: AsyncSession, uid: int, items: list[TransactionResponse], transactions: list[Transaction],
+) -> None:
+    cat_ids = list(set(t.category_id for t in transactions))
     if cat_ids:
         cat_result = await db.execute(
-            select(ExpenseCategory).where(
-                ExpenseCategory.id.in_(cat_ids),
+            select(Category).where(
+                Category.id.in_(cat_ids),
             )
         )
         cat_map = {c.id: c for c in cat_result.scalars().all()}
-        for item, expense in zip(items, expenses):
-            cat = cat_map.get(expense.category_id)
+        for item, transaction in zip(items, transactions):
+            cat = cat_map.get(transaction.category_id)
             if cat:
                 item.category = CategoryBrief(id=cat.id, name=cat.name, icon=cat.icon, color=cat.color)
 
-    expense_ids = [e.id for e in expenses]
-    if expense_ids:
-        eti_result = await db.execute(
-            select(ExpenseTagIndex, ExpenseTag).join(
-                ExpenseTag, ExpenseTag.id == ExpenseTagIndex.tag_id
+    transaction_ids = [t.id for t in transactions]
+    if transaction_ids:
+        tt_result = await db.execute(
+            select(TransactionTag, Tag).join(
+                Tag, Tag.id == TransactionTag.tag_id
             ).where(
-                ExpenseTagIndex.expense_id.in_(expense_ids),
-                ExpenseTagIndex.uid == uid,
-                ExpenseTagIndex.deleted == 0,
-                ExpenseTag.deleted == 0,
+                TransactionTag.transaction_id.in_(transaction_ids),
+                TransactionTag.uid == uid,
             )
         )
         tag_map: dict[int, list[TagBrief]] = {}
-        for eti, tag in eti_result.all():
-            tag_map.setdefault(eti.expense_id, []).append(TagBrief(id=tag.id, name=tag.name))
+        for tt, tag in tt_result.all():
+            tag_map.setdefault(tt.transaction_id, []).append(TagBrief(id=tag.id, name=tag.name))
         for item in items:
             item.tags = tag_map.get(item.id, [])

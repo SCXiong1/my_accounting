@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from database import get_db
 from middleware.jwt_auth import get_current_uid
+from schemas.statistics import CategoryStatItem, MonthlyStatItem, OverviewResponse, TagStatItem
 from services import statistics_service
 
 router = APIRouter(prefix="/api/v1/statistics", tags=["统计"])
@@ -15,7 +17,7 @@ def _parse_ids(s: str | None) -> list[int] | None:
 
 
 @router.get("/overview")
-async def overview(uid: int = Depends(get_current_uid), db: AsyncSession = Depends(get_db)):
+async def overview(uid: int = Depends(get_current_uid), db: AsyncSession = Depends(get_db)) -> OverviewResponse:
     return await statistics_service.overview(db, uid)
 
 
@@ -26,7 +28,7 @@ async def by_category(
     tag_ids: str | None = Query(default=None),
     uid: int = Depends(get_current_uid),
     db: AsyncSession = Depends(get_db),
-):
+) -> list[CategoryStatItem]:
     return await statistics_service.by_category(db, uid, start_time, end_time, _parse_ids(tag_ids))
 
 
@@ -37,7 +39,7 @@ async def by_tag(
     category_ids: str | None = Query(default=None),
     uid: int = Depends(get_current_uid),
     db: AsyncSession = Depends(get_db),
-):
+) -> list[TagStatItem]:
     return await statistics_service.by_tag(db, uid, start_time, end_time, _parse_ids(category_ids))
 
 
@@ -51,7 +53,7 @@ async def monthly(
     tag_ids: str | None = Query(default=None),
     uid: int = Depends(get_current_uid),
     db: AsyncSession = Depends(get_db),
-):
+) -> list[MonthlyStatItem]:
     return await statistics_service.monthly(
         db, uid, start_year, start_month, end_year, end_month,
         _parse_ids(category_ids), _parse_ids(tag_ids),
