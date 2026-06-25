@@ -65,6 +65,11 @@ _Avoid_: 记账页、编辑页
 7. **未来账单默认隐藏**：明细页默认只显示到今天的记录，未来账单需主动查看
 8. **标签分组显示**：记账表单选择标签时，分组显示「推荐标签」（当前分类历史）和「全部标签」（可折叠）
 
+## 已实施决策
+
+- **ADR-0001** Transaction as Core Entity — 已实施（2026-06-24）：表名 expense→transaction，新增 type 字段
+- **ADR-0002** Soft Delete Strategy — 已实施（2026-06-24）：仅 Transaction 保留软删除，Category/Tag 改为硬删除+删除保护
+
 ## 实体关系
 
 ```

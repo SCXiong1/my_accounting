@@ -1,5 +1,7 @@
 # 核心实体从 Expense 改为 Transaction
 
+## Status: IMPLEMENTED (2026-06-24)
+
 ## 背景
 
 原系统只支持支出记录，核心实体命名为 `expense`。现需支持收入和支出，核心实体改为 `transaction`，用 `type` 字段区分方向。
@@ -21,3 +23,10 @@
 
 - **保持 expense + 新增 income 表**：两张表增加查询复杂度，统计需要 UNION
 - **用 entry/record**：语义太通用，不如 transaction 在金融领域精确
+
+## 实施记录
+
+- 表名 `expense` → `transaction`，`expense_tag_index` → `transaction_tag`
+- 新增 `type` 字段（枚举：income/expense，默认 expense）
+- `TransactionTag` 简化为复合主键（transaction_id + tag_id），移除冗余自增 id
+- 所有关联外键、索引已同步更新
