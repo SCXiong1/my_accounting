@@ -1,5 +1,6 @@
 """Shared fixtures for backend unit tests."""
 import asyncio
+import time
 from collections.abc import AsyncGenerator, Generator
 
 import pytest
@@ -11,7 +12,7 @@ from database import Base
 from models.category import Category
 from models.tag import Tag
 from models.user import User
-from utils.security import hash_password
+from utils.security import hash_pin
 
 TEST_DB = "sqlite+aiosqlite://"
 
@@ -45,10 +46,14 @@ async def state() -> AsyncGenerator[State]:
     session_factory = async_sessionmaker(s.engine, class_=AsyncSession, expire_on_commit=False)
     async with session_factory() as session:
         async with session.begin():
+            now = int(time.time())
             user = User(
                 username="test_shared",
-                email="test@test.com",
-                password=hash_password("123456"),
+                password=hash_pin("1234"),
+                nickname="测试用户",
+                pin_changed=1,
+                created_at=now,
+                updated_at=now,
             )
             session.add(user)
             await session.flush()

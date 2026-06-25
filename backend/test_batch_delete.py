@@ -9,9 +9,7 @@ import os
 import httpx
 import pytest
 
-os.environ.setdefault("APP_DATABASE_PATH", "./data/test.db")
-
-BASE = os.environ.get("TEST_BASE", "http://localhost:8080")
+pytest_plugins = ["conftest_integration"]
 
 
 class _S:
@@ -24,10 +22,6 @@ class _S:
 @pytest.fixture(scope="module")
 def S():
     return _S()
-
-
-def _auth(token: str | None) -> dict:
-    return {"Authorization": f"Bearer {token}"}
 
 
 # ── Setup ──────────────────────────────────────────

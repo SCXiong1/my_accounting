@@ -32,7 +32,6 @@ interface SeedTransaction {
 
 interface TestMetadata {
   user: SeedUser
-  token: string
   categories: SeedCategory[]
   tags: SeedTag[]
   transactions: SeedTransaction[]
@@ -44,12 +43,10 @@ async function globalSetup(config: FullConfig) {
   const storageStatePath = path.join(__dirname, 'storage-state.json')
   const metadataPath = path.join(__dirname, 'test-metadata.json')
 
-  // 清理旧文件
   for (const f of [storageStatePath, metadataPath]) {
     if (fs.existsSync(f)) fs.unlinkSync(f)
   }
 
-  // 等待后端健康检查
   for (let i = 0; i < 30; i++) {
     try {
       const res = await fetch(`${apiBase}/api/health`)
@@ -61,33 +58,69 @@ async function globalSetup(config: FullConfig) {
     await new Promise((r) => setTimeout(r, 2000))
   }
 
-  // 1. 注册测试用户
-  const ts = Date.now()
-  const regRes = await fetch(`${apiBase}/api/auth/register`, {
+  const loginRes = await fetch(`${apiBase}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      username: `e2e_seed_${ts}`,
-      email: `e2e_seed_${ts}@test.com`,
-      password: 'E2eSeed123',
-      nickname: '测试用户',
-    }),
+    body: JSON.stringify({ username: 'user1', pin: '1234' }),
+    credentials: 'include',
   })
-  if (!regRes.ok) throw new Error(`注册失败: ${regRes.status} ${await regRes.text()}`)
-  const { token, user } = await regRes.json()
+  if (!loginRes.ok) throw new Error(`登录失败: ${loginRes.status} ${await loginRes.text()}`)
+  const { user } = await loginRes.json()
+  const cookies = loginRes.headers.getSetCookie()
+
+  const cookieHeader = cookies.map((c) => c.split(';')[0]).join('; ')
+
+  console.log(`[global-setup] Login successful, user: ${user.username}, pin_changed: ${user.pin_changed}`)
+
+  const changePinRes = await fetch(`${apiBase}/api/auth/change-pin`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Cookie: cookieHeader,
+    },
+    body: JSON.stringify({ current_pin: '1234', new_pin: '1234' }),
+  })
+  if (!changePinRes.ok) {
+    const text = await changePinRes.text()
+    console.log(`[global-setup] Warning: Failed to mark PIN as changed: ${changePinRes.status} ${text}`)
+  } else {
+    console.log(`[global-setup] PIN marked as changed successfully`)
+  }
+
+  const loginRes2 = await fetch(`${apiBase}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: 'user2', pin: '1234' }),
+    credentials: 'include',
+  })
+  if (loginRes2.ok) {
+    const cookies2 = loginRes2.headers.getSetCookie()
+    const cookieHeader2 = cookies2.map((c) => c.split(';')[0]).join('; ')
+    const changePinRes2 = await fetch(`${apiBase}/api/auth/change-pin`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: cookieHeader2,
+      },
+      body: JSON.stringify({ current_pin: '1234', new_pin: '1234' }),
+    })
+    if (!changePinRes2.ok) {
+      console.log(`[global-setup] Warning: Failed to mark user2 PIN as changed`)
+    } else {
+      console.log(`[global-setup] user2 PIN marked as changed successfully`)
+    }
+  }
 
   const authHeaders = {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
+    Cookie: cookieHeader,
   }
 
-  // 2. 获取注册时自动创建的分类列表
   const catRes = await fetch(`${apiBase}/api/v1/categories`, { headers: authHeaders })
   if (!catRes.ok) throw new Error(`获取分类失败: ${catRes.status}`)
   const categories = (await catRes.json()) as Array<{ id: number; name: string }>
   const catMap = Object.fromEntries(categories.map((c) => [c.name, c.id]))
 
-  // 3. 创建 4 个标签
   const tagNames = ['餐饮', '交通', '购物', '娱乐']
   const tags: SeedTag[] = []
   for (const name of tagNames) {
@@ -100,7 +133,6 @@ async function globalSetup(config: FullConfig) {
     tags.push(await res.json())
   }
 
-  // 4. 创建 5 条样本账单（金额为分）
   const now = Math.floor(Date.now() / 1000)
   const transactionData = [
     {
@@ -152,23 +184,30 @@ async function globalSetup(config: FullConfig) {
     transactions.push(await res.json())
   }
 
-  // 4. 导出 storageState（含 JWT token）
   const storageState = {
-    cookies: [],
-    origins: [
-      {
-        origin: baseURL!,
-        localStorage: [
-          { name: 'ezexpense_token', value: token },
-          { name: 'user', value: JSON.stringify(user) },
-        ],
-      },
-    ],
+    cookies: cookies.map((c) => {
+      const parts = c.split(';').map((p) => p.trim())
+      const [nameValue, ...attrs] = parts
+      const [name, value] = nameValue.split('=')
+      const cookie: Record<string, unknown> = {
+        name,
+        value,
+        domain: 'localhost',
+        path: '/',
+        sameSite: 'Lax' as const,
+      }
+      for (const attr of attrs) {
+        const [key, val] = attr.split('=')
+        if (key.toLowerCase() === 'expires') cookie.expires = new Date(val).getTime() / 1000
+        if (key.toLowerCase() === 'httponly') cookie.httpOnly = true
+      }
+      return cookie
+    }),
+    origins: [],
   }
   fs.writeFileSync(storageStatePath, JSON.stringify(storageState, null, 2))
 
-  // 6. 导出测试元数据
-  const metadata: TestMetadata = { user, token, categories, tags, transactions }
+  const metadata: TestMetadata = { user, categories, tags, transactions }
   fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2))
 
   console.log(

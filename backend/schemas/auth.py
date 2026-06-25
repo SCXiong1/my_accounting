@@ -3,27 +3,34 @@ from pydantic import BaseModel, Field
 from schemas.base import BaseSchema
 
 
-class RegisterRequest(BaseModel):
-    username: str = Field(min_length=2, max_length=32)
-    email: str = Field(min_length=1, max_length=128)
-    password: str = Field(min_length=6, max_length=64)
-    nickname: str = Field(default="", max_length=64)
-
-
 class LoginRequest(BaseModel):
     username: str
-    password: str
+    pin: str = Field(min_length=4, max_length=6)
 
 
-class ForgotPasswordRequest(BaseModel):
+class SecurityVerifyRequest(BaseModel):
     username: str
-    email: str
-    new_password: str = Field(min_length=6, max_length=64)
+    answer: str
+
+
+class ResetPinRequest(BaseModel):
+    username: str
+    answer: str
+    new_pin: str = Field(min_length=4, max_length=6)
+
+
+class ChangePinRequest(BaseModel):
+    current_pin: str = Field(min_length=4, max_length=6)
+    new_pin: str = Field(min_length=4, max_length=6)
 
 
 class AuthResponse(BaseSchema):
-    token: str
     user: "UserResponse"
+    must_change_pin: bool = False
+
+
+class SecurityQuestionResponse(BaseSchema):
+    question: str
 
 
 from schemas.user import UserResponse  # noqa: E402

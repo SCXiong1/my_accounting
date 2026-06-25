@@ -1,16 +1,15 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { showDialog } from 'vant'
-import { showTip, withMutate } from '../lib/feedback'
+import { withMutate } from '../lib/feedback'
 import { useAuthStore } from '../stores/auth'
 
+const router = useRouter()
 const auth = useAuthStore()
 
 const showNicknameEdit = ref(false)
-const showPasswordEdit = ref(false)
 const nickname = ref('')
-const oldPassword = ref('')
-const newPassword = ref('')
 const submitting = ref(false)
 
 onMounted(async () => {
@@ -33,33 +32,14 @@ async function saveNickname() {
   submitting.value = false
 }
 
-async function savePassword() {
-  if (!oldPassword.value || !newPassword.value) {
-    showTip('请填写旧密码和新密码')
-    return
-  }
-  submitting.value = true
-  await withMutate(
-    async () => {
-      await auth.updateProfile({
-        password: newPassword.value,
-        old_password: oldPassword.value,
-      })
-      showPasswordEdit.value = false
-    },
-    '密码修改成功',
-    '修改失败',
-  )
-  submitting.value = false
-}
-
 async function handleLogout() {
   try {
     await showDialog({
       title: '退出登录',
       message: '确定要退出吗？',
     })
-    auth.logout()
+    await auth.logout()
+    router.push('/login')
   } catch {
     // cancelled
   }
@@ -82,7 +62,7 @@ async function handleLogout() {
 
     <van-cell-group inset>
       <van-cell title="修改昵称" is-link @click="showNicknameEdit = true" />
-      <van-cell title="修改密码" is-link @click="showPasswordEdit = true" />
+      <van-cell title="修改PIN码" is-link @click="router.push('/pin-change')" />
       <van-cell title="分类管理" is-link to="/categories" data-testid="profile-nav-categories" />
       <van-cell title="标签管理" is-link to="/tags" data-testid="profile-nav-tags" />
       <van-cell title="回收站" is-link to="/trash" />
@@ -94,7 +74,6 @@ async function handleLogout() {
       </van-button>
     </div>
 
-    <!-- 修改昵称 -->
     <van-dialog
       v-model:show="showNicknameEdit"
       title="修改昵称"
@@ -104,20 +83,6 @@ async function handleLogout() {
     >
       <div class="profile-dialog-body">
         <van-field v-model="nickname" label="昵称" placeholder="输入新昵称" />
-      </div>
-    </van-dialog>
-
-    <!-- 修改密码 -->
-    <van-dialog
-      v-model:show="showPasswordEdit"
-      title="修改密码"
-      show-cancel-button
-      :confirm-button-disabled="submitting"
-      @confirm="savePassword"
-    >
-      <div class="profile-dialog-body">
-        <van-field v-model="oldPassword" type="password" label="旧密码" placeholder="输入旧密码" />
-        <van-field v-model="newPassword" type="password" label="新密码" placeholder="至少 6 位" />
       </div>
     </van-dialog>
   </div>

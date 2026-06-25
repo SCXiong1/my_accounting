@@ -9,5 +9,13 @@ ignore = ["ANN401"]  # allow Any for SQLAlchemy event handlers and similar
 [tool.ruff.lint.per-file-ignores]
 "test_*.py" = ["ANN"]  # skip type annotations in tests
 "conftest.py" = ["ANN"]
+"conftest_integration.py" = ["ANN"]
 "alembic/*.py" = ["ANN"]
 "alembic/versions/*.py" = ["E501"]  # auto-generated migration files
+
+[tool.pytest.ini_options]
+markers = [
+    "unit: Unit tests (no server required, in-memory DB)",
+    "integration: Integration tests (requires running server)",
+]
+asyncio_mode = "auto"

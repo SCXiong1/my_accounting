@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { getToken } from '../lib/token'
+import { useAuthStore } from '../stores/auth'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -10,9 +10,9 @@ const router = createRouter({
       component: () => import('../views/LoginPage.vue'),
     },
     {
-      path: '/register',
-      name: 'register',
-      component: () => import('../views/RegisterPage.vue'),
+      path: '/pin-change',
+      name: 'pin-change',
+      component: () => import('../views/PinChangePage.vue'),
     },
     {
       path: '/',
@@ -71,14 +71,30 @@ const router = createRouter({
   ],
 })
 
-// 导航守卫：未登录 → /login
-router.beforeEach((to, _from) => {
-  const token = getToken()
-  if (to.meta.requiresAuth && !token) {
+router.beforeEach(async (to) => {
+  const auth = useAuthStore()
+
+  if (to.meta.requiresAuth && !auth.user) {
+    try {
+      await auth.fetchProfile()
+    } catch {
+      return { name: 'login' }
+    }
+  }
+
+  if (!auth.user && to.meta.requiresAuth) {
     return { name: 'login' }
   }
-  if ((to.name === 'login' || to.name === 'register') && token) {
+
+  if (to.name === 'login' && auth.user) {
+    if (auth.mustChangePin) {
+      return { name: 'pin-change' }
+    }
     return { name: 'home' }
+  }
+
+  if (to.meta.requiresAuth && auth.mustChangePin && to.name !== 'pin-change') {
+    return { name: 'pin-change' }
   }
 })
 

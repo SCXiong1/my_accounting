@@ -11,6 +11,7 @@ import models.category  # noqa: F401
 import models.tag  # noqa: F401
 import models.transaction  # noqa: F401
 import models.transaction_tag  # noqa: F401
+import models.user  # noqa: F401
 from alembic import context
 from database import Base
 

@@ -4,15 +4,12 @@
   APP_DATABASE_PATH=./data/test.db uvicorn main:app --host 0.0.0.0 --port 8080
   pytest test_api.py -v
 """
-import os
 import time
 
 import httpx
 import pytest
 
-os.environ.setdefault("APP_DATABASE_PATH", "./data/test.db")
-
-BASE = os.environ.get("TEST_BASE", "http://localhost:8080")
+pytest_plugins = ["conftest_integration"]
 
 
 class _S:
@@ -27,10 +24,6 @@ class _S:
 @pytest.fixture(scope="module")
 def S():
     return _S()
-
-
-def _auth(token: str | None) -> dict:
-    return {"Authorization": f"Bearer {token}"}
 
 
 # ── 认证 ──────────────────────────────────────────

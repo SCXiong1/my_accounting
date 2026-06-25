@@ -1,36 +1,24 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import api from '../lib/api'
-import { setToken, removeToken, getToken } from '../lib/token'
 
 export interface User {
   id: number
   username: string
   nickname: string
+  pin_changed: boolean
   created_at: number
   updated_at: number
 }
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
-  const token = ref<string | null>(getToken())
-  async function register(
-    username: string,
-    password: string,
-    nickname: string | undefined,
-    email: string,
-  ) {
-    const res = await api.post('/auth/register', { username, email, password, nickname })
-    token.value = res.data.token
-    user.value = res.data.user
-    setToken(res.data.token)
-  }
 
-  async function login(username: string, password: string) {
-    const res = await api.post('/auth/login', { username, password })
-    token.value = res.data.token
+  const mustChangePin = computed(() => user.value?.pin_changed === false)
+
+  async function login(username: string, pin: string) {
+    const res = await api.post('/auth/login', { username, pin })
     user.value = res.data.user
-    setToken(res.data.token)
   }
 
   async function fetchProfile() {
@@ -38,33 +26,50 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = res.data.user
   }
 
-  async function updateProfile(data: {
-    nickname?: string
-    password?: string
-    old_password?: string
-  }) {
+  async function updateProfile(data: { nickname?: string }) {
     const res = await api.put('/v1/user/profile', data)
     user.value = res.data.user
-    if (res.data.token) {
-      token.value = res.data.token
-      setToken(res.data.token)
+  }
+
+  async function changePin(currentPin: string, newPin: string) {
+    await api.post('/auth/change-pin', {
+      current_pin: currentPin,
+      new_pin: newPin,
+    })
+    if (user.value) {
+      user.value.pin_changed = true
     }
   }
 
-  async function forgotPassword(username: string, email: string, newPassword: string) {
-    const res = await api.post('/auth/forgot-password', {
+  async function verifySecurity(username: string, answer: string) {
+    await api.post('/auth/verify-security', { username, answer })
+  }
+
+  async function resetPin(username: string, answer: string, newPin: string) {
+    await api.post('/auth/reset-pin', {
       username,
-      email,
-      new_password: newPassword,
+      answer,
+      new_pin: newPin,
     })
-    return res.data.message as string
   }
 
-  function logout() {
-    user.value = null
-    token.value = null
-    removeToken()
+  async function logout() {
+    try {
+      await api.post('/auth/logout')
+    } finally {
+      user.value = null
+    }
   }
 
-  return { user, token, register, login, fetchProfile, updateProfile, forgotPassword, logout }
+  return {
+    user,
+    mustChangePin,
+    login,
+    fetchProfile,
+    updateProfile,
+    changePin,
+    verifySecurity,
+    resetPin,
+    logout,
+  }
 })

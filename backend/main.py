@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 
 from api import api_router
 from config import get
@@ -20,6 +21,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="个人记账", version="1.0.0", lifespan=lifespan)
+
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=get("session.secret"),
+    max_age=int(get("session.max_age", 86400)),
+    session_cookie="session_id",
+    same_site="lax",
+    https_only=False,
+)
 
 app.add_middleware(
     CORSMiddleware,

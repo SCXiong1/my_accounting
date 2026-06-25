@@ -1,11 +1,7 @@
-// Mock localStorage for node test environment
-const storage = new Map<string, string>()
+// jsdom provides localStorage natively — no mock needed
+import { afterEach } from 'vitest'
 
-globalThis.localStorage = {
-  getItem: (key: string) => storage.get(key) ?? null,
-  setItem: (key: string, value: string) => { storage.set(key, value) },
-  removeItem: (key: string) => { storage.delete(key) },
-  clear: () => { storage.clear() },
-  get length() { return storage.size },
-  key: (index: number) => Array.from(storage.keys())[index] ?? null,
-} as Storage
+// Cleanup after each test
+afterEach(() => {
+  localStorage.clear()
+})

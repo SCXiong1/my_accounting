@@ -1,5 +1,6 @@
 """statistics_service 单元测试：overview / by_category / by_tag"""
 from datetime import datetime
+import time
 
 import pytest
 
@@ -8,7 +9,7 @@ from models.transaction import Transaction
 from models.transaction_tag import TransactionTag
 from models.user import User
 from services.statistics_service import by_category, by_tag, overview
-from utils.security import hash_password
+from utils.security import hash_pin
 
 pytest_plugins = ["conftest_unit"]
 
@@ -16,7 +17,15 @@ pytest_plugins = ["conftest_unit"]
 # ─── helpers ───
 
 async def _create_user(db, username):
-    user = User(username=username, email=f"{username}@test.com", password=hash_password("123"))
+    now = int(time.time())
+    user = User(
+        username=username,
+        password=hash_pin("1234"),
+        nickname=username,
+        pin_changed=1,
+        created_at=now,
+        updated_at=now,
+    )
     db.add(user)
     await db.flush()
     return user

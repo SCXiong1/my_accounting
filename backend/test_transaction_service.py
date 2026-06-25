@@ -8,7 +8,7 @@ from models.transaction import Transaction
 from models.transaction_tag import TransactionTag
 from models.user import User
 from services.transaction_service import _apply_keyword, permanent_delete_transactions
-from utils.security import hash_password
+from utils.security import hash_pin
 
 pytest_plugins = ["conftest_unit"]
 
@@ -181,8 +181,15 @@ async def test_permanent_delete_nonexistent_ids(db, state):
 @pytest.mark.asyncio
 async def test_permanent_delete_other_user_not_affected(db, state):
     """不影响其他用户的交易"""
-    # Create another user
-    other = User(username="perm_del_other", email="other@test.com", password=hash_password("123"))
+    now = int(time.time())
+    other = User(
+        username="perm_del_other",
+        password=hash_pin("1234"),
+        nickname="其他用户",
+        pin_changed=1,
+        created_at=now,
+        updated_at=now,
+    )
     db.add(other)
     await db.flush()
 

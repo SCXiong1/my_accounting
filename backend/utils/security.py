@@ -1,13 +1,11 @@
-from datetime import UTC, datetime, timedelta
+import time
 
 import bcrypt
-from jose import JWTError, jwt
 
-from config import get
+from middleware.error_handler import BadRequestException
 
-SECRET = get("security.jwt_secret")
-EXPIRE_DAYS = int(get("security.jwt_expire_days"))
-ALGORITHM = "HS256"
+MAX_PIN_ATTEMPTS = 5
+PIN_LOCK_SECONDS = 300
 
 
 def hash_password(password: str) -> str:
@@ -18,15 +16,23 @@ def verify_password(password: str, hashed: str) -> bool:
     return bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))
 
 
-def create_token(uid: int) -> str:
-    expire = datetime.now(UTC) + timedelta(days=EXPIRE_DAYS)
-    payload = {"uid": uid, "exp": expire}
-    return jwt.encode(payload, SECRET, algorithm=ALGORITHM)
+hash_pin = hash_password
+verify_pin = verify_password
 
 
-def decode_token(token: str) -> int | None:
-    try:
-        payload = jwt.decode(token, SECRET, algorithms=[ALGORITHM])
-        return payload.get("uid")
-    except JWTError:
-        return None
+def check_rate_limit(user) -> None:
+    if user.pin_locked_until and user.pin_locked_until > int(time.time()):
+        remaining = user.pin_locked_until - int(time.time())
+        raise BadRequestException(f"账户已锁定，请{remaining}秒后重试")
+
+
+def increment_attempts(user) -> None:
+    user.pin_attempts += 1
+    if user.pin_attempts >= MAX_PIN_ATTEMPTS:
+        user.pin_locked_until = int(time.time()) + PIN_LOCK_SECONDS
+        user.pin_attempts = 0
+
+
+def reset_attempts(user) -> None:
+    user.pin_attempts = 0
+    user.pin_locked_until = None

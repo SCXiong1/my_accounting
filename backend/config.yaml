@@ -5,9 +5,9 @@ server:
 database:
   path: "./data/ezexpense.db"
 
-security:
-  jwt_secret: "f41933ce671ed4a0f938b2b4d43e7614cb3ddc520a674210e4c0b625351f4eff"
-  jwt_expire_days: 7
+session:
+  secret: "f41933ce671ed4a0f938b2b4d43e7614cb3ddc520a674210e4c0b625351f4eff"
+  max_age: 86400
 
 cors:
   origins:

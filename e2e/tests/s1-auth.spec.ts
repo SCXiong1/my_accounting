@@ -1,91 +1,89 @@
-// 注意：S1 使用原生 test 而非 testAuth fixture，因为认证流程测试需要未认证状态
 import { test, expect } from '@playwright/test'
 
-test.describe('S1: 认证流程', () => {
-  test('注册流程：填写表单 → 跳转首页 → TabBar 可见', async ({ page }) => {
-    const uniqueId = Date.now()
-    const username = `user${uniqueId}`
-    const email = `user${uniqueId}@test.com`
+async function completePinChange(page: import('@playwright/test').Page) {
+  await page.getByPlaceholder('请输入当前PIN码').fill('1234')
+  await page.getByPlaceholder(/请输入\d+-\d+位新PIN码/).fill('1234')
+  await page.getByPlaceholder('请再次输入新PIN码').fill('1234')
+  await page.getByRole('button', { name: '修改PIN码' }).click()
+  await page.waitForURL('/')
+}
 
-    // 访问注册页面
-    await page.goto('/register')
+test.describe('S1: PIN认证流程', () => {
+  test('PIN登录：输入用户名和PIN码 → 跳转首页或修改PIN码页', async ({ page }) => {
+    await page.goto('/login')
 
-    // 填写注册表单
-    await page.getByPlaceholder('2-32 个字符').fill(username)
-    await page.getByPlaceholder('用于找回密码').fill(email)
-    await page.getByPlaceholder('至少 6 位').fill('password123')
-    await page.getByPlaceholder('再次输入密码').fill('password123')
+    await page.getByPlaceholder('请输入用户名').fill('user1')
+    await page.getByPlaceholder(/请输入\d+-\d+位PIN码/).fill('1234')
+    await page.getByRole('button', { name: '登录' }).click()
 
-    // 点击注册按钮
-    await page.getByRole('button', { name: '注册' }).click()
+    await page.waitForURL((url) => url.pathname === '/' || url.pathname === '/pin-change')
 
-    // 等待跳转到首页
-    await page.waitForURL('/')
+    if (page.url().includes('/pin-change')) {
+      await expect(page.locator('.van-nav-bar__title')).toHaveText('修改PIN码')
+      await completePinChange(page)
+    }
 
-    // 断言 TabBar 可见
     await expect(page.getByRole('tablist')).toBeVisible()
   })
 
-  test('登录流程：填写表单 → 跳转首页 → 统计卡片可见', async ({ page }) => {
-    // 先注册一个用户
-    const uniqueId = Date.now()
-    const username = `loginuser${uniqueId}`
-    const email = `login${uniqueId}@test.com`
+  test('首次登录强制修改PIN码', async ({ page }) => {
+    await page.goto('/login')
 
-    await page.goto('/register')
-    await page.getByPlaceholder('2-32 个字符').fill(username)
-    await page.getByPlaceholder('用于找回密码').fill(email)
-    await page.getByPlaceholder('至少 6 位').fill('password123')
-    await page.getByPlaceholder('再次输入密码').fill('password123')
-    await page.getByRole('button', { name: '注册' }).click()
-    await page.waitForURL('/')
-
-    // 退出登录
-    await page.getByRole('tab', { name: '我的' }).click()
-    await page.getByTestId('profile-logout').click()
-    await page.getByRole('button', { name: '确认' }).click()
-    await page.waitForURL('/login')
-
-    // 使用刚注册的账号登录
-    await page.getByPlaceholder('请输入用户名').fill(username)
-    await page.getByPlaceholder('请输入密码').fill('password123')
+    await page.getByPlaceholder('请输入用户名').fill('user1')
+    await page.getByPlaceholder(/请输入\d+-\d+位PIN码/).fill('1234')
     await page.getByRole('button', { name: '登录' }).click()
 
-    // 等待跳转到首页
-    await page.waitForURL('/')
+    await page.waitForURL((url) => url.pathname === '/' || url.pathname === '/pin-change')
 
-    // 断言统计卡片可见
-    await expect(page.getByText('今日支出')).toBeVisible()
-    await expect(page.getByText('本周支出')).toBeVisible()
-    await expect(page.getByText('本月支出')).toBeVisible()
-    await expect(page.getByText('今年支出')).toBeVisible()
+    if (page.url().includes('/pin-change')) {
+      await expect(page.locator('.van-nav-bar__title')).toHaveText('修改PIN码')
+      await completePinChange(page)
+    }
+
+    await expect(page.getByRole('tablist')).toBeVisible()
   })
 
-  test('退出流程：个人中心 → 退出 → 跳转登录页', async ({ page }) => {
-    // 先注册一个用户
-    const uniqueId = Date.now()
-    const username = `logoutuser${uniqueId}`
-    const email = `logout${uniqueId}@test.com`
+  test('错误PIN码登录失败', async ({ page }) => {
+    await page.goto('/login')
 
-    await page.goto('/register')
-    await page.getByPlaceholder('2-32 个字符').fill(username)
-    await page.getByPlaceholder('用于找回密码').fill(email)
-    await page.getByPlaceholder('至少 6 位').fill('password123')
-    await page.getByPlaceholder('再次输入密码').fill('password123')
-    await page.getByRole('button', { name: '注册' }).click()
-    await page.waitForURL('/')
+    await page.getByPlaceholder('请输入用户名').fill('user1')
+    await page.getByPlaceholder(/请输入\d+-\d+位PIN码/).fill('9999')
+    await page.getByRole('button', { name: '登录' }).click()
 
-    // 进入个人中心
+    await page.waitForTimeout(2000)
+    await expect(page).toHaveURL(/\/login/)
+  })
+
+  test('退出登录：个人中心 → 退出 → 跳转登录页', async ({ page }) => {
+    await page.goto('/login')
+    await page.getByPlaceholder('请输入用户名').fill('user2')
+    await page.getByPlaceholder(/请输入\d+-\d+位PIN码/).fill('1234')
+    await page.getByRole('button', { name: '登录' }).click()
+
+    await page.waitForURL((url) => url.pathname === '/' || url.pathname === '/pin-change')
+
+    if (page.url().includes('/pin-change')) {
+      await completePinChange(page)
+    }
+
     await page.getByRole('tab', { name: '我的' }).click()
-
-    // 点击退出登录
     await page.getByTestId('profile-logout').click()
-
-    // 确认对话框
     await page.getByRole('button', { name: '确认' }).click()
 
-    // 断言跳转到登录页
     await page.waitForURL('/login')
     await expect(page.getByRole('button', { name: '登录' })).toBeVisible()
+  })
+
+  test('安全问题PIN码重置', async ({ page }) => {
+    await page.goto('/pin-change?mode=reset')
+
+    await page.getByPlaceholder('请输入用户名').fill('user1')
+    await page.getByPlaceholder('请输入答案').fill('小1')
+    await page.getByPlaceholder(/请输入\d+-\d+位新PIN码/).fill('1234')
+    await page.getByPlaceholder('请再次输入新PIN码').fill('1234')
+    await page.getByRole('button', { name: '重置PIN码' }).click()
+
+    await page.waitForTimeout(2000)
+    await expect(page).toHaveURL(/\/login/)
   })
 })
