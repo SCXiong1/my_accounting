@@ -1,16 +1,19 @@
 import time
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
-from models.expense_category import ExpenseCategory
-from models.expense import Expense
-from models.expense_tag_index import ExpenseTagIndex
-from middleware.error_handler import NotFoundException, BadRequestException
-from schemas.category import CategoryCreate, CategoryUpdate, CategorySortRequest, CategoryResponse
-from .catalog_core import find_or_404, soft_delete, sort_models, list_ordered, next_display_order
+
+from middleware.error_handler import BadRequestException
+from models.category import Category
+from models.transaction import Transaction
+from models.transaction_tag import TransactionTag
+from schemas.category import CategoryCreate, CategoryResponse, CategorySortRequest, CategoryUpdate
+
+from .catalog_core import delete_entity, find_or_404, list_ordered, next_display_order, sort_models
 
 
 async def list_categories(db: AsyncSession, uid: int) -> list[CategoryResponse]:
-    categories = await list_ordered(db, uid, ExpenseCategory)
+    categories = await list_ordered(db, uid, Category)
 
     if not categories:
         return []
@@ -18,16 +21,16 @@ async def list_categories(db: AsyncSession, uid: int) -> list[CategoryResponse]:
     cat_ids = [c.id for c in categories]
     stats_result = await db.execute(
         select(
-            Expense.category_id,
-            func.count(Expense.id).label("cnt"),
-            func.coalesce(func.sum(Expense.amount), 0).label("total"),
+            Transaction.category_id,
+            func.count(Transaction.id).label("cnt"),
+            func.coalesce(func.sum(Transaction.amount), 0).label("total"),
         )
         .where(
-            Expense.uid == uid,
-            Expense.category_id.in_(cat_ids),
-            Expense.deleted == 0,
+            Transaction.uid == uid,
+            Transaction.category_id.in_(cat_ids),
+            Transaction.deleted == 0,
         )
-        .group_by(Expense.category_id)
+        .group_by(Transaction.category_id)
     )
     stats = {row.category_id: (row.cnt, row.total) for row in stats_result.all()}
 
@@ -40,17 +43,17 @@ async def list_categories(db: AsyncSession, uid: int) -> list[CategoryResponse]:
             icon=cat.icon,
             color=cat.color,
             display_order=cat.display_order,
-            expense_count=cnt,
+            transaction_count=cnt,
             total_amount=total,
         ))
     return resp
 
 
-async def create_category(db: AsyncSession, uid: int, req: CategoryCreate) -> ExpenseCategory:
+async def create_category(db: AsyncSession, uid: int, req: CategoryCreate) -> Category:
     now = int(time.time())
-    order = await next_display_order(db, uid, ExpenseCategory)
+    order = await next_display_order(db, uid, Category)
 
-    cat = ExpenseCategory(
+    cat = Category(
         uid=uid,
         name=req.name,
         icon=req.icon,
@@ -65,8 +68,8 @@ async def create_category(db: AsyncSession, uid: int, req: CategoryCreate) -> Ex
     return cat
 
 
-async def update_category(db: AsyncSession, uid: int, category_id: int, req: CategoryUpdate) -> ExpenseCategory:
-    cat = await find_or_404(db, uid, ExpenseCategory, category_id, "分类")
+async def update_category(db: AsyncSession, uid: int, category_id: int, req: CategoryUpdate) -> Category:
+    cat = await find_or_404(db, uid, Category, category_id, "分类")
 
     now = int(time.time())
     if req.name is not None:
@@ -83,47 +86,45 @@ async def update_category(db: AsyncSession, uid: int, category_id: int, req: Cat
 
 
 async def delete_category(db: AsyncSession, uid: int, category_id: int) -> dict:
-    await find_or_404(db, uid, ExpenseCategory, category_id, "分类")
+    await find_or_404(db, uid, Category, category_id, "分类")
 
-    expense_count = await db.execute(
-        select(func.count(Expense.id)).where(
-            Expense.uid == uid,
-            Expense.category_id == category_id,
-            Expense.deleted == 0,
+    transaction_count = await db.execute(
+        select(func.count(Transaction.id)).where(
+            Transaction.uid == uid,
+            Transaction.category_id == category_id,
+            Transaction.deleted == 0,
         )
     )
-    if expense_count.scalar() > 0:
+    if transaction_count.scalar() > 0:
         raise BadRequestException("该分类下已有支出记录，无法删除")
 
-    return await soft_delete(db, uid, ExpenseCategory, category_id, "分类")
+    return await delete_entity(db, uid, Category, category_id, "分类")
 
 
-async def sort_categories(db: AsyncSession, uid: int, req: CategorySortRequest) -> list[ExpenseCategory]:
+async def sort_categories(db: AsyncSession, uid: int, req: CategorySortRequest) -> list[Category]:
     orders = [{"id": item.id, "display_order": item.display_order} for item in req.orders]
-    return await sort_models(db, uid, ExpenseCategory, orders)
+    return await sort_models(db, uid, Category, orders)
 
 
 async def get_categories_by_tag(db: AsyncSession, uid: int, tag_id: int) -> list[CategoryResponse]:
     """查询某标签下历史使用过的分类"""
     result = await db.execute(
         select(
-            ExpenseCategory.id,
-            ExpenseCategory.name,
-            ExpenseCategory.icon,
-            ExpenseCategory.color,
-            ExpenseCategory.display_order,
+            Category.id,
+            Category.name,
+            Category.icon,
+            Category.color,
+            Category.display_order,
         )
-        .join(Expense, Expense.category_id == ExpenseCategory.id)
-        .join(ExpenseTagIndex, ExpenseTagIndex.expense_id == Expense.id)
+        .join(Transaction, Transaction.category_id == Category.id)
+        .join(TransactionTag, TransactionTag.transaction_id == Transaction.id)
         .where(
-            Expense.uid == uid,
-            ExpenseTagIndex.tag_id == tag_id,
-            Expense.deleted == 0,
-            ExpenseTagIndex.deleted == 0,
-            ExpenseCategory.deleted == 0,
+            Transaction.uid == uid,
+            TransactionTag.tag_id == tag_id,
+            Transaction.deleted == 0,
         )
         .distinct()
-        .order_by(ExpenseCategory.display_order)
+        .order_by(Category.display_order)
     )
     rows = result.all()
     return [

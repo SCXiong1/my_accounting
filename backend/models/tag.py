@@ -1,14 +1,12 @@
-from sqlalchemy import Integer, String, ForeignKey, Index
+from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
+
 from database import Base
-from models.mixins import TimestampMixin, SoftDeleteMixin
+from models.mixins import TimestampMixin
 
 
-class ExpenseTag(Base, TimestampMixin, SoftDeleteMixin):
-    __tablename__ = "expense_tag"
-    __table_args__ = (
-        Index("idx_tag_uid_deleted", "uid", "deleted", "display_order"),
-    )
+class Tag(Base, TimestampMixin):
+    __tablename__ = "tag"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     uid: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False)

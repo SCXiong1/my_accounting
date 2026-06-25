@@ -1,14 +1,12 @@
-from sqlalchemy import Integer, String, ForeignKey, Index
+from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
+
 from database import Base
-from models.mixins import TimestampMixin, SoftDeleteMixin
+from models.mixins import TimestampMixin
 
 
-class ExpenseCategory(Base, TimestampMixin, SoftDeleteMixin):
-    __tablename__ = "expense_category"
-    __table_args__ = (
-        Index("idx_category_uid_deleted", "uid", "deleted", "display_order"),
-    )
+class Category(Base, TimestampMixin):
+    __tablename__ = "category"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     uid: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False)

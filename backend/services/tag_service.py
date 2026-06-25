@@ -1,16 +1,19 @@
 import time
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
-from models.expense_tag import ExpenseTag
-from models.expense_tag_index import ExpenseTagIndex
-from models.expense import Expense
+
 from middleware.error_handler import BadRequestException
-from schemas.tag import TagCreate, TagUpdate, TagSortRequest, TagResponse
-from .catalog_core import find_or_404, soft_delete, sort_models, list_ordered, next_display_order
+from models.tag import Tag
+from models.transaction import Transaction
+from models.transaction_tag import TransactionTag
+from schemas.tag import TagCreate, TagResponse, TagSortRequest, TagUpdate
+
+from .catalog_core import delete_entity, find_or_404, list_ordered, next_display_order, sort_models
 
 
 async def list_tags(db: AsyncSession, uid: int) -> list[TagResponse]:
-    tags = await list_ordered(db, uid, ExpenseTag)
+    tags = await list_ordered(db, uid, Tag)
 
     if not tags:
         return []
@@ -18,17 +21,16 @@ async def list_tags(db: AsyncSession, uid: int) -> list[TagResponse]:
     tag_ids = [t.id for t in tags]
     stats_result = await db.execute(
         select(
-            ExpenseTagIndex.tag_id,
-            func.count(ExpenseTagIndex.id).label("cnt"),
+            TransactionTag.tag_id,
+            func.count(TransactionTag.id).label("cnt"),
         )
-        .join(Expense, Expense.id == ExpenseTagIndex.expense_id)
+        .join(Transaction, Transaction.id == TransactionTag.transaction_id)
         .where(
-            ExpenseTagIndex.tag_id.in_(tag_ids),
-            ExpenseTagIndex.uid == uid,
-            ExpenseTagIndex.deleted == 0,
-            Expense.deleted == 0,
+            TransactionTag.tag_id.in_(tag_ids),
+            TransactionTag.uid == uid,
+            Transaction.deleted == 0,
         )
-        .group_by(ExpenseTagIndex.tag_id)
+        .group_by(TransactionTag.tag_id)
     )
     stats = {row.tag_id: row.cnt for row in stats_result.all()}
 
@@ -39,26 +41,25 @@ async def list_tags(db: AsyncSession, uid: int) -> list[TagResponse]:
             id=tag.id,
             name=tag.name,
             display_order=tag.display_order,
-            expense_count=cnt,
+            transaction_count=cnt,
         ))
     return resp
 
 
-async def create_tag(db: AsyncSession, uid: int, req: TagCreate) -> ExpenseTag:
+async def create_tag(db: AsyncSession, uid: int, req: TagCreate) -> Tag:
     existing = await db.execute(
-        select(ExpenseTag).where(
-            ExpenseTag.uid == uid,
-            ExpenseTag.name == req.name.strip(),
-            ExpenseTag.deleted == 0,
+        select(Tag).where(
+            Tag.uid == uid,
+            Tag.name == req.name.strip(),
         )
     )
     if existing.scalar_one_or_none():
         raise BadRequestException(f"标签「{req.name.strip()}」已存在，请勿重复创建")
 
     now = int(time.time())
-    order = await next_display_order(db, uid, ExpenseTag)
+    order = await next_display_order(db, uid, Tag)
 
-    tag = ExpenseTag(
+    tag = Tag(
         uid=uid,
         name=req.name,
         display_order=order,
@@ -71,8 +72,8 @@ async def create_tag(db: AsyncSession, uid: int, req: TagCreate) -> ExpenseTag:
     return tag
 
 
-async def update_tag(db: AsyncSession, uid: int, tag_id: int, req: TagUpdate) -> ExpenseTag:
-    tag = await find_or_404(db, uid, ExpenseTag, tag_id, "标签")
+async def update_tag(db: AsyncSession, uid: int, tag_id: int, req: TagUpdate) -> Tag:
+    tag = await find_or_404(db, uid, Tag, tag_id, "标签")
 
     now = int(time.time())
     if req.name is not None:
@@ -85,29 +86,38 @@ async def update_tag(db: AsyncSession, uid: int, tag_id: int, req: TagUpdate) ->
 
 
 async def delete_tag(db: AsyncSession, uid: int, tag_id: int) -> dict:
-    return await soft_delete(db, uid, ExpenseTag, tag_id, "标签")
+    await find_or_404(db, uid, Tag, tag_id, "标签")
+
+    tag_index_count = await db.execute(
+        select(func.count(TransactionTag.id)).where(
+            TransactionTag.uid == uid,
+            TransactionTag.tag_id == tag_id,
+        )
+    )
+    if tag_index_count.scalar() > 0:
+        raise BadRequestException("该标签下已有支出记录，无法删除")
+
+    return await delete_entity(db, uid, Tag, tag_id, "标签")
 
 
-async def sort_tags(db: AsyncSession, uid: int, req: TagSortRequest) -> list[ExpenseTag]:
+async def sort_tags(db: AsyncSession, uid: int, req: TagSortRequest) -> list[Tag]:
     orders = [{"id": item.id, "display_order": item.display_order} for item in req.orders]
-    return await sort_models(db, uid, ExpenseTag, orders)
+    return await sort_models(db, uid, Tag, orders)
 
 
 async def get_tags_by_category(db: AsyncSession, uid: int, category_id: int) -> list[TagResponse]:
     """查询某分类下历史使用过的标签"""
     result = await db.execute(
-        select(ExpenseTag.id, ExpenseTag.name, ExpenseTag.display_order)
-        .join(ExpenseTagIndex, ExpenseTagIndex.tag_id == ExpenseTag.id)
-        .join(Expense, Expense.id == ExpenseTagIndex.expense_id)
+        select(Tag.id, Tag.name, Tag.display_order)
+        .join(TransactionTag, TransactionTag.tag_id == Tag.id)
+        .join(Transaction, Transaction.id == TransactionTag.transaction_id)
         .where(
-            Expense.uid == uid,
-            Expense.category_id == category_id,
-            Expense.deleted == 0,
-            ExpenseTagIndex.deleted == 0,
-            ExpenseTag.deleted == 0,
+            Transaction.uid == uid,
+            Transaction.category_id == category_id,
+            Transaction.deleted == 0,
         )
         .distinct()
-        .order_by(ExpenseTag.display_order)
+        .order_by(Tag.display_order)
     )
     rows = result.all()
     return [TagResponse(id=r.id, name=r.name, display_order=r.display_order) for r in rows]
