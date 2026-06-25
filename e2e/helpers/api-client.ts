@@ -1,10 +1,10 @@
-import { APIRequestContext } from '@playwright/test';
-import { loadMetadata } from '../fixtures/auth.js';
+import { APIRequestContext } from '@playwright/test'
+import { loadMetadata } from '../fixtures/auth.js'
 
-const API_BASE = 'http://localhost:8080';
+const API_BASE = 'http://localhost:8080'
 
 export async function apiClient(request: APIRequestContext, token?: string) {
-  const authToken = token ?? loadMetadata().token;
+  const authToken = token ?? loadMetadata().token
   return {
     get: (path: string) =>
       request.get(`${API_BASE}${path}`, {
@@ -24,5 +24,5 @@ export async function apiClient(request: APIRequestContext, token?: string) {
       request.delete(`${API_BASE}${path}`, {
         headers: { Authorization: `Bearer ${authToken}` },
       }),
-  };
+  }
 }

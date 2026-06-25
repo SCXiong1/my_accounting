@@ -8,6 +8,7 @@
     "test:headed": "rm -f ../backend/data/e2e-test.db && npx playwright test --headed"
   },
   "devDependencies": {
-    "@playwright/test": "^1.52.0"
+    "@playwright/test": "^1.52.0",
+    "prettier": "^3.8.4"
   }
 }
