@@ -1,6 +1,4 @@
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
-import api from '../lib/api'
+import { createCrudStore } from './createCrudStore'
 
 export interface Category {
   id: number
@@ -8,45 +6,11 @@ export interface Category {
   icon: string
   color: string
   display_order: number
-  expense_count: number
+  transaction_count: number
   total_amount: number
 }
 
-export const useCategoryStore = defineStore('category', () => {
-  const list = ref<Category[]>([])
-  const loading = ref(false)
-
-  async function fetchList() {
-    loading.value = true
-    try {
-      const res = await api.get('/v1/categories')
-      list.value = res.data
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function create(data: { name: string; icon?: string; color?: string }) {
-    const res = await api.post('/v1/categories', data)
-    list.value.push(res.data)
-    return res.data
-  }
-
-  async function update(id: number, data: { name?: string; icon?: string; color?: string }) {
-    const res = await api.put(`/v1/categories/${id}`, data)
-    const idx = list.value.findIndex(c => c.id === id)
-    if (idx !== -1) Object.assign(list.value[idx], res.data)
-  }
-
-  async function remove(id: number) {
-    await api.delete(`/v1/categories/${id}`)
-    list.value = list.value.filter(c => c.id !== id)
-  }
-
-  async function sort(orders: { id: number; display_order: number }[]) {
-    await api.put('/v1/categories/sort', { orders })
-    await fetchList()
-  }
-
-  return { list, loading, fetchList, create, update, remove, sort }
+export const useCategoryStore = createCrudStore<Category>({
+  name: 'category',
+  endpoint: '/v1/categories',
 })

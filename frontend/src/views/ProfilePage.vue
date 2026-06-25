@@ -35,7 +35,7 @@ async function saveNickname() {
 
 async function savePassword() {
   if (!oldPassword.value || !newPassword.value) {
-showTip('请填写旧密码和新密码')
+    showTip('请填写旧密码和新密码')
     return
   }
   submitting.value = true
@@ -77,9 +77,7 @@ async function handleLogout() {
       <div class="profile-name">
         {{ auth.user?.nickname || auth.user?.username }}
       </div>
-      <div class="profile-username">
-        @{{ auth.user?.username }}
-      </div>
+      <div class="profile-username">@{{ auth.user?.username }}</div>
     </div>
 
     <van-cell-group inset>
@@ -91,7 +89,9 @@ async function handleLogout() {
     </van-cell-group>
 
     <div class="profile-logout">
-      <van-button round block type="danger" data-testid="profile-logout" @click="handleLogout">退出登录</van-button>
+      <van-button round block type="danger" data-testid="profile-logout" @click="handleLogout">
+        退出登录
+      </van-button>
     </div>
 
     <!-- 修改昵称 -->
@@ -99,8 +99,8 @@ async function handleLogout() {
       v-model:show="showNicknameEdit"
       title="修改昵称"
       show-cancel-button
-      @confirm="saveNickname"
       :confirm-button-disabled="submitting"
+      @confirm="saveNickname"
     >
       <div class="profile-dialog-body">
         <van-field v-model="nickname" label="昵称" placeholder="输入新昵称" />
@@ -112,8 +112,8 @@ async function handleLogout() {
       v-model:show="showPasswordEdit"
       title="修改密码"
       show-cancel-button
-      @confirm="savePassword"
       :confirm-button-disabled="submitting"
+      @confirm="savePassword"
     >
       <div class="profile-dialog-body">
         <van-field v-model="oldPassword" type="password" label="旧密码" placeholder="输入旧密码" />

@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showTip, withMutate } from '../lib/feedback'
-import { useExpenseStore } from '../stores/expense'
+import { useTransactionStore } from '../stores/transaction'
 import { useCategoryStore } from '../stores/category'
 import { useTagStore } from '../stores/tag'
 import { formatDate } from '../core/time'
@@ -13,12 +13,12 @@ import TagCheckbox from '../components/TagCheckbox.vue'
 
 const route = useRoute()
 const router = useRouter()
-const store = useExpenseStore()
+const store = useTransactionStore()
 const catStore = useCategoryStore()
 const tagStore = useTagStore()
 
-const isEdit = route.name === 'expenseEdit'
-const expenseId = isEdit ? Number(route.params.id) : null
+const isEdit = route.name === 'transactionEdit'
+const transactionId = isEdit ? Number(route.params.id) : null
 
 const amount = ref(0)
 const categoryId = ref<number | null>(null)
@@ -31,11 +31,9 @@ const loading = ref(false)
 const showDatetimePicker = ref(false)
 const dateDisplay = computed(() => formatDate(transactionTime.value))
 
-// 校验状态
 const amountError = ref('')
 const categoryError = ref('')
 
-// 分类标签联动
 const filteredTags = ref<{ id: number; name: string }[] | undefined>(undefined)
 let prevCategoryId: number | null = null
 let categoryChangeSeq = 0
@@ -51,6 +49,7 @@ async function onCategoryChange(catId: number | null) {
       if (seq !== categoryChangeSeq) return
       filteredTags.value = res.data
     } catch {
+      /* intentional: category tags fetch optional, fallback to all tags */
       if (seq !== categoryChangeSeq) return
       filteredTags.value = undefined
     }
@@ -66,29 +65,28 @@ function datePickerValue() {
 
 onMounted(async () => {
   await Promise.all([catStore.fetchList(), tagStore.fetchList()])
-  if (isEdit && expenseId) {
+  if (isEdit && transactionId) {
     loading.value = true
     try {
-      const expense = await store.getOne(expenseId)
-      amount.value = expense.amount
-      categoryId.value = expense.category.id
-      prevCategoryId = expense.category.id
-      tagIds.value = expense.tags.map((t) => t.id)
-      transactionTime.value = expense.transaction_time
-      note.value = expense.note
-      // 编辑模式下加载该分类的标签，并保留已选标签
+      const transaction = await store.getOne(transactionId)
+      amount.value = transaction.amount
+      categoryId.value = transaction.category.id
+      prevCategoryId = transaction.category.id
+      tagIds.value = transaction.tags.map((t) => t.id)
+      transactionTime.value = transaction.transaction_time
+      note.value = transaction.note
       try {
-        const res = await api.get(`/v1/categories/${expense.category.id}/tags`)
+        const res = await api.get(`/v1/categories/${transaction.category.id}/tags`)
         const catTags: { id: number; name: string }[] = res.data
-        const existingIds = new Set(catTags.map(t => t.id))
-        for (const t of expense.tags) {
+        const existingIds = new Set(catTags.map((t) => t.id))
+        for (const t of transaction.tags) {
           if (!existingIds.has(t.id)) {
             catTags.push({ id: t.id, name: t.name })
           }
         }
         filteredTags.value = catTags
       } catch {
-        // 失败时不限制标签列表
+        /* intentional: category tags fetch optional, fallback to all tags */
       }
     } finally {
       loading.value = false
@@ -118,7 +116,7 @@ function validate(): boolean {
   }
 
   if (!ok) {
-showTip('请完善必填信息')
+    showTip('请完善必填信息')
   }
   return ok
 }
@@ -137,10 +135,18 @@ async function handleSubmit() {
         transaction_time: transactionTime.value,
         note: note.value.trim(),
       }
-      if (edit && expenseId) {
-        await store.updateExpense(expenseId, data)
+      if (edit && transactionId) {
+        await store.updateTransaction(transactionId, data)
       } else {
-        await store.create(data as { amount: number; category_id: number; tag_ids: number[]; transaction_time: number; note: string })
+        await store.create(
+          data as {
+            amount: number
+            category_id: number
+            tag_ids: number[]
+            transaction_time: number
+            note: string
+          },
+        )
       }
       router.back()
     },
@@ -153,22 +159,30 @@ async function handleSubmit() {
 
 <template>
   <div class="page-container">
-    <van-nav-bar :title="isEdit ? '编辑支出' : '新增支出'" left-text="取消" left-arrow data-testid="expense-form-nav" @click-left="$router.back()" />
+    <van-nav-bar
+      :title="isEdit ? '编辑支出' : '新增支出'"
+      left-text="取消"
+      left-arrow
+      data-testid="transaction-form-nav"
+      @click-left="$router.back()"
+    />
 
     <van-loading v-if="loading" class="form-loading" />
 
     <div v-else class="form-body">
       <CategoryPicker v-model="categoryId" @change="onCategoryChange" />
-      <div v-if="categoryError" class="form-error">{{ categoryError }}</div>
+      <div v-if="categoryError" class="form-error">
+        {{ categoryError }}
+      </div>
 
-      <TagCheckbox v-model="tagIds" :filtered-tags="filteredTags" />
+      <TagCheckbox v-model="tagIds" :filtered-tags="filteredTags" @add-tag="(t) => filteredTags?.push(t)" />
 
       <van-field
         :model-value="dateDisplay"
         is-link
         readonly
         label="日期"
-        data-testid="expense-form-date"
+        data-testid="transaction-form-date"
         @click="showDatetimePicker = true"
       />
 
@@ -180,11 +194,13 @@ async function handleSubmit() {
         type="textarea"
         maxlength="255"
         show-word-limit
-        data-testid="expense-form-note"
+        data-testid="transaction-form-note"
       />
 
       <AmountField v-model="amount" />
-      <div v-if="amountError" class="form-error">{{ amountError }}</div>
+      <div v-if="amountError" class="form-error">
+        {{ amountError }}
+      </div>
 
       <div class="form-submit">
         <van-button
@@ -193,7 +209,7 @@ async function handleSubmit() {
           type="primary"
           :loading="submitting"
           loading-text="保存中..."
-          data-testid="expense-form-submit"
+          data-testid="transaction-form-submit"
           @click="handleSubmit"
         >
           {{ isEdit ? '保存修改' : '记录支出' }}
@@ -201,11 +217,15 @@ async function handleSubmit() {
       </div>
     </div>
 
-    <!-- 日期选择器 -->
-    <van-popup v-model:show="showDatetimePicker" position="bottom" round data-testid="expense-form-date-popup">
+    <van-popup
+      v-model:show="showDatetimePicker"
+      position="bottom"
+      round
+      data-testid="transaction-form-date-popup"
+    >
       <van-date-picker
         title="选择日期"
-:model-value="datePickerValue()"
+        :model-value="datePickerValue()"
         :min-date="new Date(2020, 0, 1)"
         :max-date="new Date(2030, 11, 31)"
         @confirm="onDatetimeConfirm"

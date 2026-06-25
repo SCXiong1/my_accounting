@@ -4,7 +4,10 @@ import { showSuccess, showError, showTip } from '../lib/feedback'
 import { useTagStore } from '../stores/tag'
 
 const props = defineProps<{ modelValue: number[]; filteredTags?: { id: number; name: string }[] }>()
-const emit = defineEmits<{ 'update:modelValue': [value: number[]] }>()
+const emit = defineEmits<{
+  'update:modelValue': [value: number[]]
+  'add-tag': [tag: { id: number; name: string }]
+}>()
 
 const store = useTagStore()
 const displayTags = computed(() => props.filteredTags ?? store.list)
@@ -38,7 +41,7 @@ async function open() {
 async function addNewTag() {
   const name = newTagName.value.trim()
   if (!name) {
-showTip('请输入标签名称')
+    showTip('请输入标签名称')
     return
   }
   // 检查是否已存在同名标签
@@ -49,21 +52,21 @@ showTip('请输入标签名称')
       toggleTag(exists.id)
     }
     newTagName.value = ''
-showTip('已选中已有标签')
+    showTip('已选中已有标签')
     return
   }
   adding.value = true
   try {
-    const tag = await store.create(name)
+    const tag = await store.create({ name })
     // 将新标签加入 filteredTags 显示列表
-    if (props.filteredTags && !props.filteredTags.some(t => t.id === tag.id)) {
-      props.filteredTags.push({ id: tag.id, name: tag.name })
+    if (props.filteredTags && !props.filteredTags.some((t) => t.id === tag.id)) {
+      emit('add-tag', { id: tag.id, name: tag.name })
     }
     toggleTag(tag.id)
     newTagName.value = ''
-showSuccess('标签已添加')
+    showSuccess('标签已添加')
   } catch {
-showError('创建失败')
+    showError('创建失败')
   } finally {
     adding.value = false
   }
@@ -72,7 +75,11 @@ showError('创建失败')
 const selectedNames = computed(() => {
   if (props.modelValue.length === 0) return ''
   return props.modelValue
-    .map((id) => displayTags.value.find((t) => t.id === id)?.name ?? store.list.find((t) => t.id === id)?.name)
+    .map(
+      (id) =>
+        displayTags.value.find((t) => t.id === id)?.name ??
+        store.list.find((t) => t.id === id)?.name,
+    )
     .filter(Boolean)
     .join('、')
 })
@@ -88,7 +95,13 @@ const selectedNames = computed(() => {
     data-testid="tag-checkbox"
     @click="open"
   />
-  <van-popup v-model:show="showDialog" position="bottom" round :style="{ height: '55%' }" data-testid="tag-checkbox__popup">
+  <van-popup
+    v-model:show="showDialog"
+    position="bottom"
+    round
+    :style="{ height: '55%' }"
+    data-testid="tag-checkbox__popup"
+  >
     <div class="tag-popup">
       <h4 class="tag-popup__title">选择标签</h4>
 
@@ -100,12 +113,7 @@ const selectedNames = computed(() => {
           :border="true"
           class="tag-popup__add-input"
         />
-        <van-button
-          type="primary"
-          size="small"
-          :loading="adding"
-          @click="addNewTag"
-        >
+        <van-button type="primary" size="small" :loading="adding" @click="addNewTag">
           新增
         </van-button>
       </div>
@@ -132,7 +140,7 @@ const selectedNames = computed(() => {
       </div>
 
       <div class="tag-popup__confirm">
-        <van-button round block type="primary" @click="showDialog = false">确定</van-button>
+        <van-button round block type="primary" @click="showDialog = false"> 确定 </van-button>
       </div>
     </div>
   </van-popup>

@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { onUnmounted } from 'vue'
 import * as echarts from 'echarts'
-import { useECharts } from '../composables/useECharts'
+import { useECharts, useChart } from '../composables/useECharts'
+import type { EChartsFormatterParams } from '../types/echarts'
+import type { MonthlyStatItem } from '../stores/statistics'
 
 export interface DetailItem {
   id: number
@@ -11,14 +13,12 @@ export interface DetailItem {
 }
 
 const props = defineProps<{
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  monthlyStats: any[]
-  getDetails: (m: any) => DetailItem[]
+  monthlyStats: MonthlyStatItem[]
+  getDetails: (m: MonthlyStatItem) => DetailItem[]
   palette?: string[]
 }>()
 
-const { init, handleResize } = useECharts()
-const chartRef = ref<HTMLDivElement>()
+const { init } = useECharts()
 let chart: echarts.ECharts | null = null
 
 function render() {
@@ -39,15 +39,15 @@ function render() {
   }
 
   const entries = [...detailMap.entries()]
-  const months = props.monthlyStats.map(s => `${String(s.year).slice(2)}/${s.month}`)
+  const months = props.monthlyStats.map((s) => `${String(s.year).slice(2)}/${s.month}`)
   const series = entries.map(([id, info], i) => ({
     name: info.name,
     type: 'bar' as const,
     stack: 'total',
     barMaxWidth: 40,
     itemStyle: { color: props.palette ? props.palette[i % props.palette.length] : info.color },
-    data: props.monthlyStats.map(m => {
-      const d = props.getDetails(m).find(x => x.id === id)
+    data: props.monthlyStats.map((m) => {
+      const d = props.getDetails(m).find((x) => x.id === id)
       return d ? +(d.amount / 100).toFixed(0) : 0
     }),
   }))
@@ -55,48 +55,53 @@ function render() {
   const rows = Math.ceil(detailMap.size / 4)
   const gridBottom = 25 + rows * 20 + 6
 
-  chart.setOption({
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      formatter: (params: any[]) => {
-        let html = `<b>${params[0].axisValue}</b><br/>`
-        let total = 0
-        for (const p of params) { html += `${p.marker} ${p.seriesName}: ¥${p.value}<br/>`; total += Number(p.value) }
-        html += `<b>合计: ¥${total}</b>`
-        return html
+  chart.setOption(
+    {
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        formatter: (params: EChartsFormatterParams | EChartsFormatterParams[]) => {
+          const list = Array.isArray(params) ? params : [params]
+          let html = `<b>${list[0].axisValue ?? ''}</b><br/>`
+          let total = 0
+          for (const p of list) {
+            html += `${p.marker ?? ''} ${p.seriesName ?? ''}: ¥${p.value ?? 0}<br/>`
+            total += Number(p.value ?? 0)
+          }
+          html += `<b>合计: ¥${total}</b>`
+          return html
+        },
       },
+      legend: { orient: 'horizontal', bottom: 5, textStyle: { fontSize: 10 } },
+      grid: { left: 10, right: 10, top: 20, bottom: gridBottom },
+      xAxis: {
+        type: 'category',
+        data: months,
+        axisLabel: { rotate: months.length > 6 ? 30 : 0, fontSize: 11 },
+      },
+      yAxis: {
+        type: 'value',
+        axisLabel: { formatter: (v: number) => `¥${v}` },
+        splitLine: { lineStyle: { type: 'dashed' } },
+      },
+      series,
     },
-    legend: { orient: 'horizontal', bottom: 5, textStyle: { fontSize: 10 } },
-    grid: { left: 10, right: 10, top: 20, bottom: gridBottom },
-    xAxis: {
-      type: 'category', data: months,
-      axisLabel: { rotate: months.length > 6 ? 30 : 0, fontSize: 11 },
-    },
-    yAxis: {
-      type: 'value',
-      axisLabel: { formatter: (v: number) => `¥${v}` },
-      splitLine: { lineStyle: { type: 'dashed' } },
-    },
-    series,
-  }, { notMerge: true })
+    { notMerge: true },
+  )
 }
 
-watch(() => props.monthlyStats, render, { deep: true })
-
-onMounted(async () => {
-  await nextTick()
-  render()
-  window.addEventListener('resize', handleResize)
+const { chartRef } = useChart({
+  render,
+  watchSource: () => props.monthlyStats,
 })
+
 onUnmounted(() => {
-  window.removeEventListener('resize', handleResize)
   chart = null
 })
 </script>
 
 <template>
-  <div ref="chartRef" class="chart-box chart-bar" data-testid="chart-bar"></div>
+  <div ref="chartRef" class="chart-box chart-bar" data-testid="chart-bar" />
 </template>
 
 <style scoped>

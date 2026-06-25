@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { onUnmounted } from 'vue'
 import * as echarts from 'echarts'
 import { centsToYuan } from '../core/format'
-import { useECharts } from '../composables/useECharts'
+import { useECharts, useChart } from '../composables/useECharts'
+import type { EChartsFormatterParams } from '../types/echarts'
 
 export interface PieItem {
   name: string
@@ -18,8 +19,7 @@ const emit = defineEmits<{
   'legend-change': [selected: Record<string, boolean>]
 }>()
 
-const { init, handleResize } = useECharts()
-const chartRef = ref<HTMLDivElement>()
+const { init } = useECharts()
 let chart: echarts.ECharts | null = null
 
 function render() {
@@ -31,37 +31,43 @@ function render() {
     chart.setOption({ series: [{ type: 'pie', data: [] }] }, { notMerge: true })
     return
   }
-  chart.setOption({
-    tooltip: {
-      trigger: 'item',
-      formatter: (p: any) => `${p.name}<br/>金额: ¥${centsToYuan(p.value)}<br/>占比: ${p.percent}%`,
+  chart.setOption(
+    {
+      tooltip: {
+        trigger: 'item',
+        formatter: (p: EChartsFormatterParams) =>
+          `${p.name}<br/>金额: ¥${centsToYuan(p.value as number)}<br/>占比: ${p.percent ?? 0}%`,
+      },
+      legend: { orient: 'horizontal', bottom: 0, textStyle: { fontSize: 11 } },
+      series: [
+        {
+          type: 'pie',
+          radius: ['40%', '65%'],
+          center: ['50%', '42%'],
+          avoidLabelOverlap: false,
+          selectedMode: false,
+          itemStyle: { borderRadius: 2, borderColor: '#fff', borderWidth: 1 },
+          label: { fontSize: 10 },
+          data: props.data,
+        },
+      ],
     },
-    legend: { orient: 'horizontal', bottom: 0, textStyle: { fontSize: 11 } },
-    series: [{
-      type: 'pie', radius: ['40%', '65%'], center: ['50%', '42%'],
-      avoidLabelOverlap: false, selectedMode: false,
-      itemStyle: { borderRadius: 2, borderColor: '#fff', borderWidth: 1 },
-      label: { fontSize: 10 },
-      data: props.data,
-    }],
-  }, { notMerge: true })
+    { notMerge: true },
+  )
 }
 
-watch(() => props.data, render, { deep: true })
-
-onMounted(async () => {
-  await nextTick()
-  render()
-  window.addEventListener('resize', handleResize)
+const { chartRef } = useChart({
+  render,
+  watchSource: () => props.data,
 })
+
 onUnmounted(() => {
-  window.removeEventListener('resize', handleResize)
   chart = null
 })
 </script>
 
 <template>
-  <div ref="chartRef" class="chart-box chart-pie" data-testid="chart-pie"></div>
+  <div ref="chartRef" class="chart-box chart-pie" data-testid="chart-pie" />
 </template>
 
 <style scoped>

@@ -14,8 +14,34 @@ const formIcon = ref('📦')
 const formColor = ref('#607D8B')
 const submitting = ref(false)
 
-const iconOptions = ['🍽️', '🚗', '🛒', '🏠', '🎮', '💊', '📚', '📦', '🐱', '☕', '🎬', '✈️', '👕', '💄']
-const colorOptions = ['#FF5722', '#2196F3', '#FF9800', '#795548', '#9C27B0', '#4CAF50', '#009688', '#607D8B', '#FF4081', '#536DFE']
+const iconOptions = [
+  '🍽️',
+  '🚗',
+  '🛒',
+  '🏠',
+  '🎮',
+  '💊',
+  '📚',
+  '📦',
+  '🐱',
+  '☕',
+  '🎬',
+  '✈️',
+  '👕',
+  '💄',
+]
+const colorOptions = [
+  '#FF5722',
+  '#2196F3',
+  '#FF9800',
+  '#795548',
+  '#9C27B0',
+  '#4CAF50',
+  '#009688',
+  '#607D8B',
+  '#FF4081',
+  '#536DFE',
+]
 
 onMounted(() => {
   store.fetchList()
@@ -39,7 +65,7 @@ function openEdit(cat: Category) {
 
 async function handleSubmit() {
   if (!formName.value.trim()) {
-showTip('请输入分类名称')
+    showTip('请输入分类名称')
     return
   }
   submitting.value = true
@@ -68,8 +94,8 @@ showTip('请输入分类名称')
 }
 
 async function handleDelete(cat: Category) {
-  if (cat.expense_count > 0) {
-showError('该分类下有支出记录，无法删除')
+  if (cat.transaction_count > 0) {
+    showError('该分类下有支出记录，无法删除')
     return
   }
   try {
@@ -80,27 +106,33 @@ showError('该分类下有支出记录，无法删除')
   } catch {
     return // 用户取消
   }
-  await withMutate(
-    () => store.remove(cat.id),
-    '已删除',
-    '删除失败',
-  )
+  await withMutate(() => store.remove(cat.id), '已删除', '删除失败')
 }
 </script>
 
 <template>
   <div class="page-container">
-    <van-nav-bar title="分类管理" left-text="返回" left-arrow data-testid="category-manage-nav" @click-left="$router.back()" />
+    <van-nav-bar
+      title="分类管理"
+      left-text="返回"
+      left-arrow
+      data-testid="category-manage-nav"
+      @click-left="$router.back()"
+    />
 
     <van-cell-group v-if="store.list.length > 0" inset class="cat-list">
-      <van-swipe-cell v-for="cat in store.list" :key="cat.id" data-testid="category-manage-swipe-cell">
+      <van-swipe-cell
+        v-for="cat in store.list"
+        :key="cat.id"
+        data-testid="category-manage-swipe-cell"
+      >
         <van-cell :title="cat.name" center @click="openEdit(cat)">
           <template #icon>
             <span class="cat-list__icon">{{ cat.icon }}</span>
           </template>
           <template #label>
-            <span v-if="cat.expense_count > 0">
-              {{ cat.expense_count }} 笔 · {{ formatAmount(cat.total_amount) }}
+            <span v-if="cat.transaction_count > 0">
+              {{ cat.transaction_count }} 笔 · {{ formatAmount(cat.total_amount) }}
             </span>
             <span v-else class="cat-list__empty">暂无支出</span>
           </template>
@@ -111,8 +143,8 @@ showError('该分类下有支出记录，无法删除')
             type="danger"
             text="删除"
             data-testid="category-manage-delete-btn"
-            @click="handleDelete(cat)"
             class="cat-list__delete-btn"
+            @click="handleDelete(cat)"
           />
         </template>
       </van-swipe-cell>
@@ -124,13 +156,29 @@ showError('该分类下有支出记录，无法删除')
     </div>
 
     <div class="cat-add-btn">
-      <van-button round block type="primary" data-testid="category-manage-add-btn" @click="openCreate">新增分类</van-button>
+      <van-button
+        round
+        block
+        type="primary"
+        data-testid="category-manage-add-btn"
+        @click="openCreate"
+      >
+        新增分类
+      </van-button>
     </div>
 
     <!-- 新增/编辑弹窗 -->
-    <van-popup v-model:show="showForm" position="bottom" round :style="{ height: '60%' }" data-testid="category-manage-popup">
+    <van-popup
+      v-model:show="showForm"
+      position="bottom"
+      round
+      :style="{ height: '60%' }"
+      data-testid="category-manage-popup"
+    >
       <div class="cat-popup">
-        <h4 class="cat-popup__title">{{ editing ? '编辑分类' : '新增分类' }}</h4>
+        <h4 class="cat-popup__title">
+          {{ editing ? '编辑分类' : '新增分类' }}
+        </h4>
         <van-field
           v-model="formName"
           label="名称"
@@ -145,10 +193,11 @@ showError('该分类下有支出记录，无法删除')
               v-for="icon in iconOptions"
               :key="icon"
               data-testid="category-manage-icon"
-              @click="formIcon = icon"
               class="cat-icon-option"
               :class="{ 'cat-icon-option--active': formIcon === icon }"
-            >{{ icon }}</span>
+              @click="formIcon = icon"
+              >{{ icon }}</span
+            >
           </div>
         </div>
         <div class="cat-popup__section">
@@ -158,10 +207,10 @@ showError('该分类下有支出记录，无法删除')
               v-for="color in colorOptions"
               :key="color"
               data-testid="category-manage-color"
-              @click="formColor = color"
               class="cat-color-option"
               :class="{ 'cat-color-option--active': formColor === color }"
               :style="{ background: color }"
+              @click="formColor = color"
             />
           </div>
         </div>

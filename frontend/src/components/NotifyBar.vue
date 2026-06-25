@@ -14,11 +14,11 @@ const colorMap: Record<string, string> = {
       <div
         v-for="item in notifyState.items"
         :key="item.id"
-        @click="remove(item.id)"
         class="notify-bar__item"
         :style="{
           background: colorMap[item.type] || 'var(--color-text-primary)',
         }"
+        @click="remove(item.id)"
       >
         {{ item.message }}
       </div>

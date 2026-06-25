@@ -10,13 +10,16 @@ const router = useRouter()
 const auth = useAuthStore()
 
 const showTabbar = computed(() => {
-  const routesWithTabbar = ['home', 'expenses', 'statistics', 'profile']
+  const routesWithTabbar = ['home', 'transactions', 'statistics', 'profile']
   return routesWithTabbar.includes(String(route.name ?? ''))
 })
 
-watch(() => auth.token, (val) => {
-  if (!val) router.push('/login')
-})
+watch(
+  () => auth.token,
+  (val) => {
+    if (!val) router.push('/login')
+  },
+)
 
 onMounted(() => {
   setUnauthorizedHandler(() => {
@@ -30,9 +33,13 @@ onMounted(() => {
   <NotifyBar />
   <router-view />
   <van-tabbar v-if="showTabbar" route placeholder data-testid="app-tabbar">
-    <van-tabbar-item name="home" icon="home-o" to="/">首页</van-tabbar-item>
-    <van-tabbar-item name="expenses" icon="balance-o" to="/expenses">记账</van-tabbar-item>
-    <van-tabbar-item name="statistics" icon="chart-trending-o" to="/statistics">统计</van-tabbar-item>
-    <van-tabbar-item name="profile" icon="user-o" to="/profile">我的</van-tabbar-item>
+    <van-tabbar-item name="home" icon="home-o" to="/"> 首页 </van-tabbar-item>
+    <van-tabbar-item name="transactions" icon="balance-o" to="/transactions">
+      记账
+    </van-tabbar-item>
+    <van-tabbar-item name="statistics" icon="chart-trending-o" to="/statistics">
+      统计
+    </van-tabbar-item>
+    <van-tabbar-item name="profile" icon="user-o" to="/profile"> 我的 </van-tabbar-item>
   </van-tabbar>
 </template>

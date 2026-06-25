@@ -1,20 +1,19 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { showConfirmDialog } from 'vant'
-import { useExpenseStore } from '../stores/expense'
-import { showSuccess, showError, withMutate } from '../lib/feedback'
+import { useTransactionStore } from '../stores/transaction'
+import { showError, withMutate } from '../lib/feedback'
 import { getErrorMessage } from '../lib/error'
-import ExpenseCard from '../components/ExpenseCard.vue'
+import TransactionCard from '../components/TransactionCard.vue'
 
-const store = useExpenseStore()
+const store = useTransactionStore()
 const restoring = ref<number | null>(null)
 
-// 批量选择
 const selectMode = ref(false)
 const selectedIds = ref<number[]>([])
 
-const allSelected = computed(() =>
-  store.deletedItems.length > 0 && selectedIds.value.length === store.deletedItems.length
+const allSelected = computed(
+  () => store.deletedItems.length > 0 && selectedIds.value.length === store.deletedItems.length,
 )
 
 function toggleSelectMode() {
@@ -37,7 +36,7 @@ function toggleSelectAll() {
   if (allSelected.value) {
     selectedIds.value = []
   } else {
-    selectedIds.value = store.deletedItems.map(e => e.id)
+    selectedIds.value = store.deletedItems.map((e) => e.id)
   }
 }
 
@@ -92,7 +91,13 @@ async function handleBatchDelete() {
   <div class="page-container">
     <van-nav-bar title="回收站" left-text="返回" left-arrow @click-left="$router.back()">
       <template #right>
-        <van-button size="small" type="primary" plain @click="toggleSelectMode" data-testid="trash-select-mode">
+        <van-button
+          size="small"
+          type="primary"
+          plain
+          data-testid="trash-select-mode"
+          @click="toggleSelectMode"
+        >
           {{ selectMode ? '取消' : '批量删除' }}
         </van-button>
       </template>
@@ -104,30 +109,33 @@ async function handleBatchDelete() {
       <div class="trash-empty-hint">删除的支出会保留在这里，可以恢复</div>
     </div>
 
-    <div v-for="expense in store.deletedItems" :key="expense.id" class="trash-item">
+    <div v-for="transaction in store.deletedItems" :key="transaction.id" class="trash-item">
       <van-checkbox
         v-if="selectMode"
-        :model-value="selectedIds.includes(expense.id)"
+        :model-value="selectedIds.includes(transaction.id)"
         class="trash-item__checkbox"
         data-testid="trash-checkbox"
-        @click="toggleSelect(expense.id)"
+        @click="toggleSelect(transaction.id)"
       />
-      <ExpenseCard :expense="expense" class="trash-item__card" />
+      <TransactionCard :transaction="transaction" class="trash-item__card" />
       <van-button
         v-if="!selectMode"
         size="small"
         type="primary"
-        :loading="restoring === expense.id"
-        @click="handleRestore(expense.id)"
+        :loading="restoring === transaction.id"
         class="trash-item__restore"
+        @click="handleRestore(transaction.id)"
       >
         恢复
       </van-button>
     </div>
 
-    <!-- 底部批量操作栏 -->
     <div v-if="selectMode" class="trash-batch-bar" data-testid="trash-batch-bar">
-      <van-checkbox :model-value="allSelected" @click="toggleSelectAll" data-testid="trash-select-all">
+      <van-checkbox
+        :model-value="allSelected"
+        data-testid="trash-select-all"
+        @click="toggleSelectAll"
+      >
         全选 ({{ selectedIds.length }}/{{ store.deletedItems.length }})
       </van-checkbox>
       <van-button

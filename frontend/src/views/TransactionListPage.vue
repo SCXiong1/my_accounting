@@ -4,26 +4,29 @@ import { useRouter, useRoute } from 'vue-router'
 import { showConfirmDialog } from 'vant'
 import { getErrorMessage } from '../lib/error'
 import { showError, withMutate } from '../lib/feedback'
-import { useExpenseStore } from '../stores/expense'
+import { useTransactionStore } from '../stores/transaction'
 import { useCategoryStore } from '../stores/category'
 import { useTagStore } from '../stores/tag'
-import { usePeriodFilter } from '../composables/usePeriodFilter'
-import ExpenseCard from '../components/ExpenseCard.vue'
+import TransactionCard from '../components/TransactionCard.vue'
 import FilterPicker from '../components/FilterPicker.vue'
+import PeriodFilterBar from '../components/PeriodFilterBar.vue'
+import type { TimeRange } from '../components/PeriodFilterBar.vue'
 
 const router = useRouter()
 const route = useRoute()
-const store = useExpenseStore()
+const store = useTransactionStore()
 const catStore = useCategoryStore()
 const tagStore = useTagStore()
 
-const {
-  activePeriod, periods, timeRange,
-  showCustomPopup, pickStep, pickerValue,
-  selectPeriod, openCustom, onPickerConfirm, onCancelCustom,
-} = usePeriodFilter()
+const timeRange = ref<TimeRange>({
+  start_time: 0,
+  end_time: 0,
+  start_year: 0,
+  start_month: 0,
+  end_year: 0,
+  end_month: 0,
+})
 
-// 筛选条件
 const filterCategoryId = ref<number>()
 const filterTagId = ref<number>()
 const filterKeyword = ref('')
@@ -46,7 +49,6 @@ function filterParams() {
   }
 }
 
-// 下拉刷新
 const refreshing = ref(false)
 
 function syncQueryFilters() {
@@ -58,20 +60,23 @@ function syncQueryFilters() {
 onMounted(async () => {
   syncQueryFilters()
   await Promise.all([
-    store.fetchList({ ...filterParams(), limit: INITIAL_LIMIT }),
     catStore.fetchList(),
     tagStore.fetchList(),
   ])
 })
 
-watch(() => route.query, () => {
-  syncQueryFilters()
-  applyFilter()
-})
+watch(
+  () => route.query,
+  () => {
+    syncQueryFilters()
+    applyFilter()
+  },
+)
 
-watch(timeRange, () => {
+function handlePeriodChange(range: TimeRange) {
+  timeRange.value = range
   applyFilter()
-})
+}
 
 async function loadMore() {
   if (!store.hasMore) return
@@ -109,14 +114,24 @@ function clearFilter() {
   filterKeyword.value = ''
 }
 
+function onClearFilter() {
+  clearFilter()
+  applyFilter()
+}
+
+function onToggleSort() {
+  sortBy.value = sortBy.value === 'time' ? 'amount' : 'time'
+  applyFilter()
+}
+
 const catColumns = computed(() => [
   { text: '全部分类', value: -1 },
-  ...catStore.list.map(c => ({ text: c.name, value: c.id })),
+  ...catStore.list.map((c) => ({ text: c.name, value: c.id })),
 ])
 
 const tagColumns = computed(() => [
   { text: '全部标签', value: -1 },
-  ...tagStore.list.map(t => ({ text: t.name, value: t.id })),
+  ...tagStore.list.map((t) => ({ text: t.name, value: t.id })),
 ])
 
 function onCatSelect(val: number) {
@@ -132,10 +147,9 @@ function onTagSelect(val: number) {
 }
 
 function goAdd() {
-  router.push('/expenses/add')
+  router.push('/transactions/add')
 }
 
-// 拖拽检测：左滑时抑制 click 导航
 const isDragging = ref(false)
 const pointerStart = ref({ x: 0, y: 0 })
 
@@ -151,12 +165,14 @@ function onPointerMove(e: PointerEvent) {
 }
 
 function onPointerUp() {
-  setTimeout(() => { isDragging.value = false }, 0)
+  setTimeout(() => {
+    isDragging.value = false
+  }, 0)
 }
 
 function goEdit(id: number) {
   if (isDragging.value) return
-  router.push(`/expenses/${id}/edit`)
+  router.push(`/transactions/${id}/edit`)
 }
 
 async function handleDelete(id: number) {
@@ -166,52 +182,28 @@ async function handleDelete(id: number) {
       message: '确定删除这条支出记录吗？',
     })
   } catch {
-    return // 用户取消
+    return
   }
-  await withMutate(
-    () => store.remove(id),
-    '已删除',
-    '删除失败',
-  )
+  await withMutate(() => store.remove(id), '已删除', '删除失败')
 }
 </script>
 
 <template>
   <div class="page-container">
-    <van-nav-bar title="支出记录" data-testid="expense-list-nav" />
+    <van-nav-bar title="支出记录" data-testid="transaction-list-nav" />
 
-    <!-- 搜索栏 -->
-    <div class="expense-search-bar">
+    <div class="transaction-search-bar">
       <van-search
         v-model="filterKeyword"
         placeholder="搜索金额/分类/标签/备注..."
         shape="round"
         @search="applyFilter"
-        @clear="clearFilter(); applyFilter()"
+        @clear="onClearFilter"
       />
     </div>
 
-    <!-- 时间筛选 -->
-    <div class="filter-bar">
-      <van-button
-        v-for="p in periods" :key="p.key"
-        :type="activePeriod === p.key ? 'primary' : 'default'"
-        size="small" round
-        data-testid="expense-period-btn"
-        @click="selectPeriod(p.key)"
-      >
-        {{ p.label }}
-      </van-button>
-      <van-button
-        :type="activePeriod === 'custom' ? 'primary' : 'default'"
-        size="small" round
-        @click="openCustom"
-      >
-        自定义
-      </van-button>
-    </div>
+    <PeriodFilterBar test-id-prefix="transaction-period" @change="handlePeriodChange" />
 
-    <!-- 筛选栏 -->
     <div class="filter-bar">
       <van-tag
         class="filter-bar__item"
@@ -219,7 +211,7 @@ async function handleDelete(id: number) {
         size="medium"
         @click="showCategoryFilter = true"
       >
-        {{ filterCategoryId ? catStore.list.find(c => c.id === filterCategoryId)?.name : '分类' }}
+        {{ filterCategoryId ? catStore.list.find((c) => c.id === filterCategoryId)?.name : '分类' }}
       </van-tag>
       <van-tag
         class="filter-bar__item"
@@ -227,134 +219,99 @@ async function handleDelete(id: number) {
         size="medium"
         @click="showTagFilter = true"
       >
-        {{ filterTagId ? tagStore.list.find(t => t.id === filterTagId)?.name : '标签' }}
+        {{ filterTagId ? tagStore.list.find((t) => t.id === filterTagId)?.name : '标签' }}
       </van-tag>
       <van-tag
         class="filter-bar__item"
         :type="sortBy === 'amount' ? 'primary' : 'default'"
         size="medium"
-        @click="sortBy = sortBy === 'time' ? 'amount' : 'time'; applyFilter()"
+        @click="onToggleSort"
       >
         {{ sortBy === 'time' ? '时间↓' : '金额↓' }}
       </van-tag>
-      <span class="expense-total-count">
-        共 {{ store.total }} 条
-      </span>
+      <span class="transaction-total-count"> 共 {{ store.total }} 条 </span>
     </div>
 
-    <!-- 支出列表 -->
     <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
       <van-list
         v-model:loading="store.loading"
         :finished="!store.hasMore"
         finished-text="没有更多了"
-        @load="loadMore"
         :immediate-check="false"
+        @load="loadMore"
       >
         <div v-if="store.items.length === 0 && !store.loading" class="empty-placeholder">
-          <div class="expense-empty-icon">📝</div>
-          <div class="expense-empty-text">暂无支出记录</div>
+          <div class="transaction-empty-icon">📝</div>
+          <div class="transaction-empty-text">暂无支出记录</div>
         </div>
-        <div v-for="expense in store.items" :key="expense.id"
+        <div
+          v-for="transaction in store.items"
+          :key="transaction.id"
           @pointerdown="onPointerDown"
           @pointermove="onPointerMove"
           @pointerup="onPointerUp"
-          @click="goEdit(expense.id)">
-          <van-swipe-cell data-testid="expense-list-swipe-cell">
-            <ExpenseCard :expense="expense" />
+          @click="goEdit(transaction.id)"
+        >
+          <van-swipe-cell data-testid="transaction-list-swipe-cell">
+            <TransactionCard :transaction="transaction" />
             <template #right>
               <van-button
                 square
                 type="danger"
                 text="删除"
-                data-testid="expense-list-delete-btn"
-@click.stop="handleDelete(expense.id)"
-                class="expense-delete-btn"
+                data-testid="transaction-list-delete-btn"
+                class="transaction-delete-btn"
+                @click.stop="handleDelete(transaction.id)"
               />
             </template>
           </van-swipe-cell>
-          <van-divider class="expense-divider" />
+          <van-divider class="transaction-divider" />
         </div>
       </van-list>
     </van-pull-refresh>
 
-    <!-- 新增按钮 -->
-    <div class="expense-fab">
-      <van-button
-        icon="plus"
-        type="primary"
-        round
-        size="large"
-        @click="goAdd"
-      />
+    <div class="transaction-fab">
+      <van-button icon="plus" type="primary" round size="large" @click="goAdd" />
     </div>
 
-    <!-- 分类筛选 -->
     <FilterPicker v-model:show="showCategoryFilter" :columns="catColumns" @select="onCatSelect" />
 
-    <!-- 标签筛选 -->
     <FilterPicker v-model:show="showTagFilter" :columns="tagColumns" @select="onTagSelect" />
-
-    <!-- 自定义时间选择器 -->
-    <van-popup v-model:show="showCustomPopup" position="bottom" round>
-      <div class="custom-popup">
-        <div class="custom-popup__title">
-          {{ pickStep === 'start' ? '选择开始月份' : '选择结束月份' }}
-        </div>
-        <van-date-picker
-          :key="pickStep"
-          v-model="pickerValue"
-          :columns-type="['year', 'month']"
-          @confirm="onPickerConfirm"
-          @cancel="onCancelCustom"
-        />
-      </div>
-    </van-popup>
   </div>
 </template>
 
 <style scoped>
-.expense-search-bar {
+.transaction-search-bar {
   padding: var(--space-md) var(--space-lg);
   background: var(--color-surface);
 }
 
-.expense-total-count {
+.transaction-total-count {
   font-size: 12px;
   color: var(--color-text-secondary);
   line-height: 24px;
   margin-left: auto;
 }
 
-.expense-empty-icon {
+.transaction-empty-icon {
   font-size: 48px;
 }
 
-.expense-empty-text {
+.transaction-empty-text {
   margin-top: var(--space-md);
 }
 
-.expense-delete-btn {
+.transaction-delete-btn {
   height: 100%;
 }
 
-.expense-divider {
+.transaction-divider {
   margin: var(--space-xs) 0;
 }
 
-.expense-fab {
+.transaction-fab {
   position: fixed;
   right: var(--space-lg);
   bottom: 70px;
-}
-
-.custom-popup {
-  padding: var(--space-lg);
-}
-
-.custom-popup__title {
-  text-align: center;
-  margin-bottom: var(--space-md);
-  font-weight: 500;
 }
 </style>

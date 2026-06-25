@@ -29,7 +29,7 @@ function openEdit(tag: Tag) {
 
 async function handleSubmit() {
   if (!tagName.value.trim()) {
-showTip('请输入标签名称')
+    showTip('请输入标签名称')
     return
   }
   submitting.value = true
@@ -37,9 +37,9 @@ showTip('请输入标签名称')
   await withMutate(
     async () => {
       if (isEdit) {
-        await store.update(editing.value!.id, tagName.value.trim())
+        await store.update(editing.value!.id, { name: tagName.value.trim() })
       } else {
-        await store.create(tagName.value.trim())
+        await store.create({ name: tagName.value.trim() })
       }
       dialogVisible.value = false
     },
@@ -58,11 +58,7 @@ async function handleDelete(tag: Tag) {
   } catch {
     return // 用户取消
   }
-  await withMutate(
-    () => store.remove(tag.id),
-    '已删除',
-    '删除失败',
-  )
+  await withMutate(() => store.remove(tag.id), '已删除', '删除失败')
 }
 </script>
 
@@ -77,13 +73,15 @@ async function handleDelete(tag: Tag) {
         size="large"
         closeable
         data-testid="tag-manage-tag"
-        @close="handleDelete(tag)"
-        @click="openEdit(tag)"
         type="primary"
         class="tag-list__item"
+        @close="handleDelete(tag)"
+        @click="openEdit(tag)"
       >
         {{ tag.name }}
-        <span v-if="tag.expense_count > 0" class="tag-list__count"> ({{ tag.expense_count }})</span>
+        <span v-if="tag.transaction_count > 0" class="tag-list__count">
+          ({{ tag.transaction_count }})</span
+        >
       </van-tag>
     </div>
 
@@ -93,7 +91,9 @@ async function handleDelete(tag: Tag) {
     </div>
 
     <div class="tag-add-btn">
-      <van-button round block type="primary" data-testid="tag-manage-add-btn" @click="openCreate">新增标签</van-button>
+      <van-button round block type="primary" data-testid="tag-manage-add-btn" @click="openCreate">
+        新增标签
+      </van-button>
     </div>
 
     <!-- 新增/编辑弹窗 -->

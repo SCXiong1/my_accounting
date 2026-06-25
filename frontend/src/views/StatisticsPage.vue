@@ -6,20 +6,34 @@ import { formatAmount } from '../core/format'
 import { showError } from '../lib/feedback'
 import { getErrorMessage } from '../lib/error'
 import { useECharts } from '../composables/useECharts'
-import { usePeriodFilter } from '../composables/usePeriodFilter'
 import ChartPie from '../components/ChartPie.vue'
 import ChartBar from '../components/ChartBar.vue'
+import PeriodFilterBar from '../components/PeriodFilterBar.vue'
+import type { TimeRange } from '../components/PeriodFilterBar.vue'
 
 const router = useRouter()
 const store = useStatisticsStore()
 const { handleResize } = useECharts()
-const {
-  activePeriod, periods, timeRange,
-  showCustomPopup, pickStep, pickerValue,
-  selectPeriod, openCustom, onPickerConfirm, onCancelCustom,
-} = usePeriodFilter()
 
-const TAG_PALETTE = ['#E8915A', '#2D6A4F', '#7BA7C9', '#D96B6B', '#C49BD9', '#E8C76B', '#6BC5C5', '#B8927A']
+const TAG_PALETTE = [
+  '#E8915A',
+  '#2D6A4F',
+  '#7BA7C9',
+  '#D96B6B',
+  '#C49BD9',
+  '#E8C76B',
+  '#6BC5C5',
+  '#B8927A',
+]
+
+const timeRange = ref<TimeRange>({
+  start_time: 0,
+  end_time: 0,
+  start_year: 0,
+  start_month: 0,
+  end_year: 0,
+  end_month: 0,
+})
 
 const selectedCategoryId = ref<number | null>(null)
 const busy = ref(false)
@@ -28,16 +42,18 @@ const catLegendVisible = ref<Record<string, boolean>>({})
 const tagLegendVisible = ref<Record<string, boolean>>({})
 
 const filteredCategoryStats = computed(() =>
-  store.categoryStats.filter(s => catLegendVisible.value[`${s.category_icon} ${s.category_name}`] !== false)
+  store.categoryStats.filter(
+    (s) => catLegendVisible.value[`${s.category_icon} ${s.category_name}`] !== false,
+  ),
 )
 
 const filteredTagStats = computed(() =>
-  store.tagStats.filter(s => tagLegendVisible.value[s.tag_name] !== false)
+  store.tagStats.filter((s) => tagLegendVisible.value[s.tag_name] !== false),
 )
 
 const selectedCatLabel = computed(() => {
   if (!selectedCategoryId.value) return ''
-  const cat = store.categoryStats.find(c => c.category_id === selectedCategoryId.value)
+  const cat = store.categoryStats.find((c) => c.category_id === selectedCategoryId.value)
   return cat ? `${cat.category_icon} ${cat.category_name}` : ''
 })
 
@@ -46,17 +62,17 @@ function clearCatFilter() {
 }
 
 function goExpenseList() {
-  router.push('/expenses')
+  router.push('/transactions')
 }
 
 // ── 饼图数据转换 ──────────────────────────────
 
 const catPieData = computed(() =>
-  store.categoryStats.map(s => ({
+  store.categoryStats.map((s) => ({
     name: `${s.category_icon} ${s.category_name}`,
     value: s.total_amount,
     itemStyle: { color: s.category_color || undefined },
-  }))
+  })),
 )
 
 const tagPieData = computed(() =>
@@ -64,16 +80,21 @@ const tagPieData = computed(() =>
     name: s.tag_name,
     value: s.total_amount,
     itemStyle: { color: TAG_PALETTE[i % TAG_PALETTE.length] },
-  }))
+  })),
 )
 
 // ── 柱状图数据提取 ────────────────────────────
 
-const catBarDetails = (m: typeof store.monthlyStats[number]) =>
-  m.by_category.map(c => ({ id: c.category_id, name: c.category_name, color: c.category_color, amount: c.amount }))
+const catBarDetails = (m: (typeof store.monthlyStats)[number]) =>
+  m.by_category.map((c) => ({
+    id: c.category_id,
+    name: c.category_name,
+    color: c.category_color,
+    amount: c.amount,
+  }))
 
-const tagBarDetails = (m: typeof store.monthlyStats[number]) =>
-  m.by_tag.map(t => ({ id: t.tag_id, name: t.tag_name, color: '', amount: t.amount }))
+const tagBarDetails = (m: (typeof store.monthlyStats)[number]) =>
+  m.by_tag.map((t) => ({ id: t.tag_id, name: t.tag_name, color: '', amount: t.amount }))
 
 // ── 数据加载 ──────────────────────────────────
 
@@ -83,7 +104,7 @@ async function loadData(fetchAll: boolean) {
   const r = timeRange.value
   const catFilter = selectedCategoryId.value ? String(selectedCategoryId.value) : undefined
 
-  const tasks: Promise<any>[] = []
+  const tasks: Promise<void>[] = []
   if (fetchAll) {
     tasks.push(store.fetchOverview())
     tasks.push(store.fetchByCategory(r.start_time, r.end_time))
@@ -105,14 +126,15 @@ async function loadData(fetchAll: boolean) {
 
 // ── 响应式监听 ────────────────────────────────
 
-watch(timeRange, () => {
+function handlePeriodChange(range: TimeRange) {
+  timeRange.value = range
   selectedCategoryId.value = null
   loadData(true)
-})
+}
+
 watch(selectedCategoryId, () => loadData(false))
 
 onMounted(() => {
-  loadData(true)
   window.addEventListener('resize', handleResize)
 })
 onUnmounted(() => {
@@ -124,35 +146,25 @@ onUnmounted(() => {
   <div class="page-container">
     <van-nav-bar title="统计分析" />
 
-    <div class="filter-bar">
-      <van-button
-        v-for="p in periods" :key="p.key"
-        :type="activePeriod === p.key ? 'primary' : 'default'"
-        size="small" round
-        data-testid="stats-period-btn"
-        @click="selectPeriod(p.key)"
-      >
-        {{ p.label }}
-      </van-button>
-      <van-button
-        :type="activePeriod === 'custom' ? 'primary' : 'default'"
-        size="small" round
-        @click="openCustom"
-      >
-        自定义
-      </van-button>
-    </div>
+    <PeriodFilterBar test-id-prefix="stats-period" @change="handlePeriodChange" />
 
     <van-grid :column-num="4" :border="false" class="stats-overview-grid">
-      <van-grid-item v-for="item in [
-        { label: '今日', val: store.overview.today },
-        { label: '本周', val: store.overview.this_week },
-        { label: '本月', val: store.overview.this_month },
-        { label: '今年', val: store.overview.this_year },
-      ]" :key="item.label">
+      <van-grid-item
+        v-for="item in [
+          { label: '今日', val: store.overview.today },
+          { label: '本周', val: store.overview.this_week },
+          { label: '本月', val: store.overview.this_month },
+          { label: '今年', val: store.overview.this_year },
+        ]"
+        :key="item.label"
+      >
         <div class="stat-card stats-overview-card">
-          <div class="stat-card__amount stats-overview-amount">{{ formatAmount(item.val) }}</div>
-          <div class="stat-card__label">{{ item.label }}</div>
+          <div class="stat-card__amount stats-overview-amount">
+            {{ formatAmount(item.val) }}
+          </div>
+          <div class="stat-card__label">
+            {{ item.label }}
+          </div>
         </div>
       </van-grid-item>
     </van-grid>
@@ -166,14 +178,17 @@ onUnmounted(() => {
     <div v-if="!busy && store.categoryStats.length === 0" class="empty-placeholder stats-empty">
       <div class="stats-empty-text">暂无数据</div>
     </div>
-    <ChartPie v-else :data="catPieData" @legend-change="s => catLegendVisible = s" />
+    <ChartPie v-else :data="catPieData" @legend-change="(s) => (catLegendVisible = s)" />
 
     <div v-if="filteredCategoryStats.length > 0" class="stats-detail-list">
       <div
-        v-for="s in filteredCategoryStats.slice(0, 8)" :key="s.category_id"
+        v-for="s in filteredCategoryStats.slice(0, 8)"
+        :key="s.category_id"
         class="stats-detail-row"
         data-testid="stats-category-row"
-        @click="router.push({ path: '/expenses', query: { category_id: String(s.category_id) } })"
+        @click="
+          router.push({ path: '/transactions', query: { category_id: String(s.category_id) } })
+        "
       >
         <span>{{ s.category_icon }}</span>
         <span class="stats-detail-name">{{ s.category_name }}</span>
@@ -200,14 +215,20 @@ onUnmounted(() => {
     <div v-if="!busy && store.tagStats.length === 0" class="empty-placeholder stats-empty">
       <div class="stats-empty-text">暂无标签数据</div>
     </div>
-    <ChartPie v-else :data="tagPieData" data-testid="stats-tag-pie" @legend-change="s => tagLegendVisible = s" />
+    <ChartPie
+      v-else
+      :data="tagPieData"
+      data-testid="stats-tag-pie"
+      @legend-change="(s) => (tagLegendVisible = s)"
+    />
 
     <div v-if="filteredTagStats.length > 0" class="stats-detail-list stats-detail-list--bottom">
       <div
-        v-for="(t, i) in filteredTagStats.slice(0, 6)" :key="t.tag_id"
+        v-for="(t, i) in filteredTagStats.slice(0, 6)"
+        :key="t.tag_id"
         class="stats-detail-row"
         data-testid="stats-tag-row"
-        @click="router.push({ path: '/expenses', query: { tag_id: String(t.tag_id) } })"
+        @click="router.push({ path: '/transactions', query: { tag_id: String(t.tag_id) } })"
       >
         <span class="stats-tag-dot" :style="{ background: TAG_PALETTE[i % TAG_PALETTE.length] }" />
         <span class="stats-detail-name">{{ t.tag_name }}</span>
@@ -221,23 +242,13 @@ onUnmounted(() => {
     <div v-if="!busy && store.monthlyStats.length === 0" class="empty-placeholder stats-empty">
       <div class="stats-empty-text">暂无数据</div>
     </div>
-    <ChartBar v-else :monthly-stats="store.monthlyStats" :get-details="tagBarDetails" :palette="TAG_PALETTE" />
-    <div class="stats-bottom-spacer"></div>
-
-    <van-popup v-model:show="showCustomPopup" position="bottom" round>
-      <div class="custom-popup">
-        <div class="custom-popup__title">
-          {{ pickStep === 'start' ? '选择开始月份' : '选择结束月份' }}
-        </div>
-        <van-date-picker
-          :key="pickStep"
-          v-model="pickerValue"
-          :columns-type="['year', 'month']"
-          @confirm="onPickerConfirm"
-          @cancel="onCancelCustom"
-        />
-      </div>
-    </van-popup>
+    <ChartBar
+      v-else
+      :monthly-stats="store.monthlyStats"
+      :get-details="tagBarDetails"
+      :palette="TAG_PALETTE"
+    />
+    <div class="stats-bottom-spacer" />
   </div>
 </template>
 
@@ -314,20 +325,5 @@ onUnmounted(() => {
 
 .stats-bottom-spacer {
   height: var(--space-section);
-}
-
-.custom-popup {
-  padding: var(--space-lg);
-}
-
-.custom-popup__title {
-  text-align: center;
-  font-size: 16px;
-  font-weight: 500;
-  margin-bottom: var(--space-md);
-}
-
-.custom-popup__actions {
-  padding: var(--space-sm) var(--space-lg) var(--space-lg);
 }
 </style>

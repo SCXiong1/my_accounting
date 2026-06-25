@@ -31,7 +31,13 @@ export interface MonthlyStatItem {
   month: number
   total_amount: number
   transaction_count: number
-  by_category: { category_id: number; category_name: string; category_icon: string; category_color: string; amount: number }[]
+  by_category: {
+    category_id: number
+    category_name: string
+    category_icon: string
+    category_color: string
+    amount: number
+  }[]
   by_tag: MonthlyTagDetail[]
 }
 
@@ -48,7 +54,10 @@ export const useStatisticsStore = defineStore('statistics', () => {
   const monthlyLoading = ref(false)
 
   // Computed aggregate loading state
-  const loading = computed(() => overviewLoading.value || categoryLoading.value || tagLoading.value || monthlyLoading.value)
+  const loading = computed(
+    () =>
+      overviewLoading.value || categoryLoading.value || tagLoading.value || monthlyLoading.value,
+  )
 
   // Request cancellation for each fetch type
   const categoryRequest = createCancellableRequest()
@@ -103,15 +112,25 @@ export const useStatisticsStore = defineStore('statistics', () => {
   }
 
   async function fetchMonthly(
-    start_year?: number, start_month?: number,
-    end_year?: number, end_month?: number,
-    category_ids?: string, tag_ids?: string,
+    start_year?: number,
+    start_month?: number,
+    end_year?: number,
+    end_month?: number,
+    category_ids?: string,
+    tag_ids?: string,
   ) {
     const mySeq = ++monthSeq
     monthlyLoading.value = true
     try {
       const data = await monthlyRequest.execute(async (signal) => {
-        const params = buildQueryParams({ start_year, start_month, end_year, end_month, category_ids, tag_ids })
+        const params = buildQueryParams({
+          start_year,
+          start_month,
+          end_year,
+          end_month,
+          category_ids,
+          tag_ids,
+        })
         const res = await api.get('/v1/statistics/monthly', { params, signal })
         return res.data
       })
@@ -123,8 +142,18 @@ export const useStatisticsStore = defineStore('statistics', () => {
   }
 
   return {
-    categoryStats, tagStats, monthlyStats, overview,
-    loading, overviewLoading, categoryLoading, tagLoading, monthlyLoading,
-    fetchOverview, fetchByCategory, fetchByTag, fetchMonthly,
+    categoryStats,
+    tagStats,
+    monthlyStats,
+    overview,
+    loading,
+    overviewLoading,
+    categoryLoading,
+    tagLoading,
+    monthlyLoading,
+    fetchOverview,
+    fetchByCategory,
+    fetchByTag,
+    fetchMonthly,
   }
 })

@@ -1,13 +1,14 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api, { buildQueryParams, createCancellableRequest } from '../lib/api'
+import { TRASH_PAGE_LIMIT } from '../core/constants'
 import type { Category } from './category'
 import type { Tag } from './tag'
 
 export type CategoryBrief = Pick<Category, 'id' | 'name' | 'icon' | 'color'>
 export type TagBrief = Pick<Tag, 'id' | 'name'>
 
-export interface ExpenseItem {
+export interface TransactionItem {
   id: number
   amount: number
   category: CategoryBrief
@@ -15,9 +16,10 @@ export interface ExpenseItem {
   transaction_time: number
   timezone_offset: number
   note: string
+  type: string
 }
 
-export interface ExpenseListParams {
+export interface TransactionListParams {
   cursor?: number
   limit?: number
   start_time?: number
@@ -28,33 +30,31 @@ export interface ExpenseListParams {
   sort_by?: string
 }
 
-export interface ExpenseFormData {
+export interface TransactionFormData {
   amount: number
   category_id: number
   tag_ids: number[]
   transaction_time: number
   timezone_offset?: number
   note?: string
+  type?: string
 }
 
-export const useExpenseStore = defineStore('expense', () => {
-  // Active expenses (used by HomePage, ExpenseListPage)
-  const items = ref<ExpenseItem[]>([])
+export const useTransactionStore = defineStore('transaction', () => {
+  const items = ref<TransactionItem[]>([])
   const nextCursor = ref<number>()
   const total = ref(0)
   const loading = ref(false)
   const hasMore = ref(true)
 
-  // Deleted expenses (used by TrashPage) — separate array to avoid cross-page contamination
-  const deletedItems = ref<ExpenseItem[]>([])
+  const deletedItems = ref<TransactionItem[]>([])
   const deletedTotal = ref(0)
   const deletedLoading = ref(false)
 
-  // Request cancellation for list fetches
   const listRequest = createCancellableRequest()
   let fetchSeq = 0
 
-  async function fetchList(params: ExpenseListParams = {}, append = false) {
+  async function fetchList(params: TransactionListParams = {}, append = false) {
     const mySeq = ++fetchSeq
     loading.value = true
     try {
@@ -70,11 +70,10 @@ export const useExpenseStore = defineStore('expense', () => {
           sort_by: params.sort_by,
         })
 
-        const res = await api.get('/v1/expenses', { params: query, signal })
+        const res = await api.get('/v1/transactions', { params: query, signal })
         return res.data
       })
 
-      // Stale response — a newer fetch superseded us
       if (mySeq !== fetchSeq) return undefined
 
       if (append) {
@@ -87,7 +86,6 @@ export const useExpenseStore = defineStore('expense', () => {
       hasMore.value = data.next_cursor !== null
       return data
     } finally {
-      // Only clear loading if we are the latest fetch
       if (mySeq === fetchSeq) {
         loading.value = false
       }
@@ -101,23 +99,23 @@ export const useExpenseStore = defineStore('expense', () => {
     hasMore.value = true
   }
 
-  async function getOne(id: number): Promise<ExpenseItem> {
-    const res = await api.get(`/v1/expenses/${id}`)
+  async function getOne(id: number): Promise<TransactionItem> {
+    const res = await api.get(`/v1/transactions/${id}`)
     return res.data
   }
 
-  async function create(data: ExpenseFormData) {
-    const res = await api.post('/v1/expenses', data)
+  async function create(data: TransactionFormData) {
+    const res = await api.post('/v1/transactions', data)
     return res.data
   }
 
-  async function updateExpense(id: number, data: Partial<ExpenseFormData>) {
-    const res = await api.put(`/v1/expenses/${id}`, data)
+  async function updateTransaction(id: number, data: Partial<TransactionFormData>) {
+    const res = await api.put(`/v1/transactions/${id}`, data)
     return res.data
   }
 
   async function remove(id: number) {
-    await api.delete(`/v1/expenses/${id}`)
+    await api.delete(`/v1/transactions/${id}`)
     items.value = items.value.filter((e) => e.id !== id)
     total.value--
   }
@@ -125,7 +123,9 @@ export const useExpenseStore = defineStore('expense', () => {
   async function fetchDeleted() {
     deletedLoading.value = true
     try {
-      const res = await api.get('/v1/expenses', { params: { deleted: 1, limit: 100 } })
+      const res = await api.get('/v1/transactions', {
+        params: { deleted: 1, limit: TRASH_PAGE_LIMIT },
+      })
       deletedItems.value = res.data.items
       deletedTotal.value = res.data.total
     } finally {
@@ -139,22 +139,36 @@ export const useExpenseStore = defineStore('expense', () => {
   }
 
   async function restore(id: number) {
-    await api.post(`/v1/expenses/${id}/restore`)
+    await api.post(`/v1/transactions/${id}/restore`)
     deletedItems.value = deletedItems.value.filter((e) => e.id !== id)
     deletedTotal.value--
   }
 
   async function batchPermanentDelete(ids: number[]) {
-    const res = await api.post('/v1/expenses/batch-delete', { ids })
+    const res = await api.post('/v1/transactions/batch-delete', { ids })
     const deletedCount = res.data.deleted_count ?? ids.length
     deletedItems.value = deletedItems.value.filter((e) => !ids.includes(e.id))
     deletedTotal.value = Math.max(0, deletedTotal.value - deletedCount)
   }
 
   return {
-    items, nextCursor, total, loading, hasMore,
-    deletedItems, deletedTotal, deletedLoading,
-    fetchList, resetList, getOne, create, updateExpense, remove,
-    fetchDeleted, resetDeleted, restore, batchPermanentDelete,
+    items,
+    nextCursor,
+    total,
+    loading,
+    hasMore,
+    deletedItems,
+    deletedTotal,
+    deletedLoading,
+    fetchList,
+    resetList,
+    getOne,
+    create,
+    updateTransaction,
+    remove,
+    fetchDeleted,
+    resetDeleted,
+    restore,
+    batchPermanentDelete,
   }
 })

@@ -14,7 +14,12 @@ export interface User {
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const token = ref<string | null>(getToken())
-  async function register(username: string, password: string, nickname: string | undefined, email: string) {
+  async function register(
+    username: string,
+    password: string,
+    nickname: string | undefined,
+    email: string,
+  ) {
     const res = await api.post('/auth/register', { username, email, password, nickname })
     token.value = res.data.token
     user.value = res.data.user
@@ -33,7 +38,11 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = res.data.user
   }
 
-  async function updateProfile(data: { nickname?: string; password?: string; old_password?: string }) {
+  async function updateProfile(data: {
+    nickname?: string
+    password?: string
+    old_password?: string
+  }) {
     const res = await api.put('/v1/user/profile', data)
     user.value = res.data.user
     if (res.data.token) {
@@ -44,7 +53,9 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function forgotPassword(username: string, email: string, newPassword: string) {
     const res = await api.post('/auth/forgot-password', {
-      username, email, new_password: newPassword,
+      username,
+      email,
+      new_password: newPassword,
     })
     return res.data.message as string
   }

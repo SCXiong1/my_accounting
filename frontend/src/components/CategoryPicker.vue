@@ -19,7 +19,7 @@ const pickerColumns = computed(() =>
   store.list.map((cat) => ({
     text: `${cat.icon} ${cat.name}`,
     value: cat.id,
-  }))
+  })),
 )
 
 function onSelect(id: number) {

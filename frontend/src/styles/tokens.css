@@ -1,21 +1,21 @@
 :root {
   /* ── Base colors ── */
-  --color-bg: #FFF9F0;
-  --color-surface: #FFFFFF;
-  --color-text-primary: #2D2A26;
-  --color-text-secondary: #8C8580;
-  --color-text-placeholder: #C4BEB8;
-  --color-border: #EDE8E3;
+  --color-bg: #fff9f0;
+  --color-surface: #ffffff;
+  --color-text-primary: #2d2a26;
+  --color-text-secondary: #8c8580;
+  --color-text-placeholder: #c4beb8;
+  --color-border: #ede8e3;
 
   /* ── Functional colors ── */
-  --color-primary: #E8915A;
-  --color-primary-light: #FCEEE4;
-  --color-accent: #2D6A4F;
-  --color-accent-light: #E8F5EE;
-  --color-accent-dark: #1B4332;
-  --color-success: #7DB88B;
-  --color-danger: #D96B6B;
-  --color-info: #7BA7C9;
+  --color-primary: #e8915a;
+  --color-primary-light: #fceee4;
+  --color-accent: #2d6a4f;
+  --color-accent-light: #e8f5ee;
+  --color-accent-dark: #1b4332;
+  --color-success: #7db88b;
+  --color-danger: #d96b6b;
+  --color-info: #7ba7c9;
 
   /* ── Spacing ── */
   --space-xs: 4px;
@@ -40,7 +40,8 @@
   --shadow-lg: 0 8px 24px rgba(45, 42, 38, 0.12);
 
   /* ── Font ── */
-  --font-family: -apple-system, "SF Pro Text", "PingFang SC", "Helvetica Neue", "Noto Sans SC", sans-serif;
+  --font-family:
+    -apple-system, 'SF Pro Text', 'PingFang SC', 'Helvetica Neue', 'Noto Sans SC', sans-serif;
   --font-size-amount: 26px;
   --font-size-amount-sm: 18px;
 }
