@@ -5,8 +5,9 @@
   pytest test_api.py -v
 """
 import os
-import httpx
 import time
+
+import httpx
 import pytest
 
 os.environ.setdefault("APP_DATABASE_PATH", "./data/test.db")
@@ -44,7 +45,7 @@ def test_register_a(S: _S):
     S.token_a = data["token"]
     assert "token" in data
     assert data["user"]["username"] == "testuser_a"
-    print(f"  [OK] 注册用户A")
+    print("  [OK] 注册用户A")
 
 
 def test_register_b(S: _S):
@@ -54,7 +55,7 @@ def test_register_b(S: _S):
     })
     assert resp.status_code == 200, f"Register B failed: {resp.text}"
     S.token_b = resp.json()["token"]
-    print(f"  [OK] 注册用户B")
+    print("  [OK] 注册用户B")
 
 
 def test_register_duplicate():
@@ -63,7 +64,7 @@ def test_register_duplicate():
         "nickname": "dup", "email": "dup@test.com",
     })
     assert resp.status_code == 400
-    print(f"  [OK] 重复注册被拒绝")
+    print("  [OK] 重复注册被拒绝")
 
 
 def test_login(S: _S):
@@ -72,7 +73,7 @@ def test_login(S: _S):
     })
     assert resp.status_code == 200
     S.token_a = resp.json()["token"]
-    print(f"  [OK] 登录成功")
+    print("  [OK] 登录成功")
 
 
 def test_login_wrong_password():
@@ -80,14 +81,14 @@ def test_login_wrong_password():
         "username": "testuser_a", "password": "wrong"
     })
     assert resp.status_code == 401
-    print(f"  [OK] 错误密码被拒绝")
+    print("  [OK] 错误密码被拒绝")
 
 
 def test_refresh_token(S: _S):
     resp = httpx.post(f"{BASE}/api/auth/refresh", headers=_auth(S.token_a))
     assert resp.status_code == 200
     assert "token" in resp.json()
-    print(f"  [OK] 刷新令牌成功")
+    print("  [OK] 刷新令牌成功")
 
 
 # ── 分类 ──────────────────────────────────────────
@@ -137,14 +138,14 @@ def test_create_tag_duplicate(S: _S):
                       json={"name": "午餐"},
                       headers=_auth(S.token_a))
     assert resp.status_code == 400, f"Expected 400, got {resp.status_code}: {resp.text}"
-    print(f"  [OK] 同名标签创建被拒绝")
+    print("  [OK] 同名标签创建被拒绝")
 
 
 # ── 支出 ──────────────────────────────────────────
 
 def test_create_expense(S: _S):
     now = int(time.time())
-    resp = httpx.post(f"{BASE}/api/v1/expenses",
+    resp = httpx.post(f"{BASE}/api/v1/transactions",
                       json={
                           "amount": 3500,
                           "category_id": S.category_id,
@@ -159,7 +160,7 @@ def test_create_expense(S: _S):
 
 
 def test_list_expenses(S: _S):
-    resp = httpx.get(f"{BASE}/api/v1/expenses?limit=10",
+    resp = httpx.get(f"{BASE}/api/v1/transactions?limit=10",
                      headers=_auth(S.token_a))
     assert resp.status_code == 200
     data = resp.json()
@@ -171,28 +172,28 @@ def test_list_expenses(S: _S):
 
 
 def test_expense_filter_by_tag(S: _S):
-    resp = httpx.get(f"{BASE}/api/v1/expenses?tag_id={S.tag_id}",
+    resp = httpx.get(f"{BASE}/api/v1/transactions?tag_id={S.tag_id}",
                      headers=_auth(S.token_a))
     assert resp.status_code == 200
     assert resp.json()["total"] == 1
-    print(f"  [OK] 按标签筛选正常")
+    print("  [OK] 按标签筛选正常")
 
 
 def test_expense_filter_by_keyword(S: _S):
-    resp = httpx.get(f"{BASE}/api/v1/expenses?keyword=猫粮",
+    resp = httpx.get(f"{BASE}/api/v1/transactions?keyword=猫粮",
                      headers=_auth(S.token_a))
     assert resp.status_code == 200
     assert resp.json()["total"] == 1
-    print(f"  [OK] 按关键词筛选正常")
+    print("  [OK] 按关键词筛选正常")
 
 
 def test_update_expense(S: _S):
-    resp = httpx.put(f"{BASE}/api/v1/expenses/{S.expense_id}",
+    resp = httpx.put(f"{BASE}/api/v1/transactions/{S.expense_id}",
                      json={"note": "给猫咪买进口猫粮"},
                      headers=_auth(S.token_a))
     assert resp.status_code == 200
     assert resp.json()["note"] == "给猫咪买进口猫粮"
-    print(f"  [OK] 修改支出成功")
+    print("  [OK] 修改支出成功")
 
 
 # ── 统计 ──────────────────────────────────────────
@@ -233,39 +234,39 @@ def test_statistics_monthly(S: _S):
 # ── 权限与删除 ────────────────────────────────────
 
 def test_user_isolation(S: _S):
-    resp = httpx.get(f"{BASE}/api/v1/expenses",
+    resp = httpx.get(f"{BASE}/api/v1/transactions",
                      headers=_auth(S.token_b))
     assert resp.status_code == 200
     assert resp.json()["total"] == 0
-    print(f"  [OK] 用户隔离: 用户B看不到用户A的数据")
+    print("  [OK] 用户隔离: 用户B看不到用户A的数据")
 
 
 def test_delete_category_blocked(S: _S):
     resp = httpx.delete(f"{BASE}/api/v1/categories/{S.category_id}",
                         headers=_auth(S.token_a))
     assert resp.status_code == 400
-    print(f"  [OK] 有支出的分类删除被阻止")
+    print("  [OK] 有支出的分类删除被阻止")
 
 
 def test_delete_expense(S: _S):
-    resp = httpx.delete(f"{BASE}/api/v1/expenses/{S.expense_id}",
+    resp = httpx.delete(f"{BASE}/api/v1/transactions/{S.expense_id}",
                         headers=_auth(S.token_a))
     assert resp.status_code == 200
     assert resp.json()["deleted"] is True
-    print(f"  [OK] 删除支出成功")
+    print("  [OK] 删除支出成功")
 
 
 def test_restore_expense(S: _S):
     """恢复已删除支出，标签应一并恢复"""
-    resp = httpx.post(f"{BASE}/api/v1/expenses/{S.expense_id}/restore",
+    resp = httpx.post(f"{BASE}/api/v1/transactions/{S.expense_id}/restore",
                       headers=_auth(S.token_a))
     assert resp.status_code == 200, f"Restore failed: {resp.text}"
     # 验证标签已恢复
-    detail = httpx.get(f"{BASE}/api/v1/expenses/{S.expense_id}",
+    detail = httpx.get(f"{BASE}/api/v1/transactions/{S.expense_id}",
                        headers=_auth(S.token_a))
     assert detail.status_code == 200
     assert len(detail.json()["tags"]) > 0, "标签未恢复"
-    print(f"  [OK] 恢复支出成功，标签已恢复")
+    print("  [OK] 恢复支出成功，标签已恢复")
 
 
 # ── 用户 ──────────────────────────────────────────
@@ -275,7 +276,7 @@ def test_profile(S: _S):
                      headers=_auth(S.token_a))
     assert resp.status_code == 200
     assert resp.json()["user"]["username"] == "testuser_a"
-    print(f"  [OK] 获取个人信息成功")
+    print("  [OK] 获取个人信息成功")
 
 
 def test_update_profile(S: _S):
@@ -284,7 +285,7 @@ def test_update_profile(S: _S):
                      headers=_auth(S.token_a))
     assert resp.status_code == 200
     assert resp.json()["user"]["nickname"] == "小明"
-    print(f"  [OK] 修改昵称成功")
+    print("  [OK] 修改昵称成功")
 
 
 # ── 手动执行入口 ──────────────────────────────────

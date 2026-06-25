@@ -5,6 +5,7 @@
   pytest test_linkage.py -v
 """
 import os
+
 import httpx
 import pytest
 
@@ -62,7 +63,7 @@ def test_create_tags(S: _S):
 
 def test_create_expense_with_food_and_lunch(S: _S):
     """创建一条 餐饮+午餐 的支出"""
-    resp = httpx.post(f"{BASE}/api/v1/expenses", json={
+    resp = httpx.post(f"{BASE}/api/v1/transactions", json={
         "amount": 3500,
         "category_id": S.cat_food,
         "tag_ids": [S.tag_lunch],
@@ -74,7 +75,7 @@ def test_create_expense_with_food_and_lunch(S: _S):
 
 def test_create_expense_with_transport_and_taxi(S: _S):
     """创建一条 交通+打车 的支出"""
-    resp = httpx.post(f"{BASE}/api/v1/expenses", json={
+    resp = httpx.post(f"{BASE}/api/v1/transactions", json={
         "amount": 15000,
         "category_id": S.cat_transport,
         "tag_ids": [S.tag_taxi],

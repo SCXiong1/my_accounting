@@ -5,6 +5,7 @@
   pytest test_batch_delete.py -v
 """
 import os
+
 import httpx
 import pytest
 
@@ -56,7 +57,7 @@ def test_create_expenses(S: _S):
     """创建 3 条支出"""
     ids = []
     for i in range(3):
-        resp = httpx.post(f"{BASE}/api/v1/expenses", json={
+        resp = httpx.post(f"{BASE}/api/v1/transactions", json={
             "amount": 1000 * (i + 1),
             "category_id": S.cat_id,
             "tag_ids": [S.tag_id],
@@ -71,7 +72,7 @@ def test_create_expenses(S: _S):
 def test_soft_delete_expenses(S: _S):
     """软删除所有支出"""
     for eid in S.expense_ids:
-        resp = httpx.delete(f"{BASE}/api/v1/expenses/{eid}", headers=_auth(S.token))
+        resp = httpx.delete(f"{BASE}/api/v1/transactions/{eid}", headers=_auth(S.token))
         assert resp.status_code == 200
 
 
@@ -79,19 +80,19 @@ def test_soft_delete_expenses(S: _S):
 
 def test_batch_delete_requires_auth(S: _S):
     """未认证请求应返回 401/403"""
-    resp = httpx.post(f"{BASE}/api/v1/expenses/batch-delete", json={"ids": [1]})
+    resp = httpx.post(f"{BASE}/api/v1/transactions/batch-delete", json={"ids": [1]})
     assert resp.status_code in (401, 403)
 
 
 def test_batch_delete_empty_ids(S: _S):
     """空 ID 列表应返回 422"""
-    resp = httpx.post(f"{BASE}/api/v1/expenses/batch-delete", json={"ids": []}, headers=_auth(S.token))
+    resp = httpx.post(f"{BASE}/api/v1/transactions/batch-delete", json={"ids": []}, headers=_auth(S.token))
     assert resp.status_code == 422
 
 
 def test_batch_delete_permanent(S: _S):
     """批量永久删除应成功"""
-    resp = httpx.post(f"{BASE}/api/v1/expenses/batch-delete", json={"ids": S.expense_ids}, headers=_auth(S.token))
+    resp = httpx.post(f"{BASE}/api/v1/transactions/batch-delete", json={"ids": S.expense_ids}, headers=_auth(S.token))
     assert resp.status_code == 200
     data = resp.json()
     assert data["deleted_count"] == 3
@@ -100,7 +101,7 @@ def test_batch_delete_permanent(S: _S):
 def test_batch_delete_verifies_gone(S: _S):
     """删除后记录应不可恢复"""
     for eid in S.expense_ids:
-        resp = httpx.post(f"{BASE}/api/v1/expenses/{eid}/restore", headers=_auth(S.token))
+        resp = httpx.post(f"{BASE}/api/v1/transactions/{eid}/restore", headers=_auth(S.token))
         assert resp.status_code == 404
 
 
@@ -120,7 +121,7 @@ def test_batch_delete_only_own_expenses(S: _S):
     other_cat_id = resp.json()[0]["id"]
 
     # 创建一条支出（用其他用户的分类）
-    resp = httpx.post(f"{BASE}/api/v1/expenses", json={
+    resp = httpx.post(f"{BASE}/api/v1/transactions", json={
         "amount": 9999, "category_id": other_cat_id, "tag_ids": [],
         "transaction_time": 1700000000, "note": "其他用户的支出",
     }, headers=_auth(other_token))
@@ -128,10 +129,14 @@ def test_batch_delete_only_own_expenses(S: _S):
     other_expense_id = resp.json()["id"]
 
     # 软删除
-    resp = httpx.delete(f"{BASE}/api/v1/expenses/{other_expense_id}", headers=_auth(other_token))
+    resp = httpx.delete(f"{BASE}/api/v1/transactions/{other_expense_id}", headers=_auth(other_token))
     assert resp.status_code == 200
 
     # 尝试用 S.token 永久删除
-    resp = httpx.post(f"{BASE}/api/v1/expenses/batch-delete", json={"ids": [other_expense_id]}, headers=_auth(S.token))
+    resp = httpx.post(
+        f"{BASE}/api/v1/transactions/batch-delete",
+        json={"ids": [other_expense_id]},
+        headers=_auth(S.token),
+    )
     assert resp.status_code == 200
     assert resp.json()["deleted_count"] == 0
